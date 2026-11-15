@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED — AWAITING PHASE 5 APPROVAL)
+> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (FINAL SECURITY REVIEW — AWAITING REMEDIATION APPROVAL)
 
 ---
 
@@ -16,26 +16,17 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 1 (Environment Setup and Application Foundation)**: **COMPLETE & REMEDIATED**.
 - **Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)**: **COMPLETE & VERIFIED**.
 - **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
-- **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETE & VERIFIED**.
-  - Authentication foundation (`src/core/security.py`, `src/api/routers/auth.py`): Argon2id password hashing via `pwdlib[argon2]`, signed short-lived JWT access tokens via `pyjwt` (`HS256`, 60-min expiration), safe initial legacy password enrollment (`/api/v1/auth/enroll`), OAuth2 login (`/api/v1/auth/token`), and user profile (`/api/v1/auth/me`).
+- **Phase 4 (FastAPI REST API & Data Portability Services)**: **IMPLEMENTED & AUDITED**.
+  - Authentication foundation (`src/core/security.py`, `src/api/routers/auth.py`): Argon2id password hashing via `pwdlib[argon2]`, signed short-lived JWT access tokens via `pyjwt` (`HS256`, 60-min expiration), OAuth2 login (`/api/v1/auth/token`), and user profile (`/api/v1/auth/me`).
   - Migration `6c8ca07763d0`: Added nullable `hashed_password` to `users` table via `batch_alter_table`.
-  - Financial REST API Routers (`src/api/routers/`):
-    - `/api/v1/accounts`: Protected account management with active filtering.
-    - `/api/v1/transactions`: Income/expense posting, atomic transfers (`/transfer`), compensating reversals (`/{id}/reverse`), pagination, filters, and mathematical balance reconciliation (`/reconcile/{account_id}`).
-    - `/api/v1/budgets`: Budget allocations (`POST /`), category utilization (`/utilization`), period overviews (`/period`), threshold classification (NORMAL, WARNING, EXCEEDED), and rollover.
-    - `/api/v1/goals`: Savings milestones, contributions (`/{id}/contribute`), withdrawals (`/{id}/withdraw`), and progress tracking (`/{id}/progress`).
-    - `/api/v1/loans`: Debt obligations, auto-generated fixed-rate amortization schedules, payment instalment recording (`/{id}/payment`).
-    - `/api/v1/investments`: Securities purchasing (`/buy`) with weighted-average cost basis, sales (`/sell`) with unit sufficiency checks and realized P&L, dividend logs (`/dividend`), and holdings queries (`/holdings`).
-    - `/api/v1/recurring`: Recurrence rule definitions, due rule queries (`/due`), execution spawning ledger transactions with duplicate occurrence prevention (`/{id}/execute`), pause/resume (`/pause`, `/resume`).
-  - Data Portability Pipeline (`src/services/portability_service.py`, `src/api/routers/data_portability.py`):
-    - Statement Import Wizard (`POST /api/v1/data/import/preview`, `POST /api/v1/data/import/commit`): Pandas/openpyxl CSV and XLSX parsing, configurable column mappings, validation limits (5MB, 1000 rows), duplicate detection against existing ledger records, and atomic batch commit.
-    - Data Export (`GET /api/v1/data/export/csv`, `GET /api/v1/data/export/xlsx`): Filtered transaction exports with formula injection defense (`=, +, -, @, \t, \r` escaping).
-    - Backup & Dry-Run Validation (`GET /api/v1/data/backup`, `POST /api/v1/data/backup/validate`): Full user-scoped JSON backup snapshot across 11 tables with exact Decimal string formatting. Destructive restore is strictly non-executable per security directives; only non-destructive export and dry-run validation are exposed.
-  - 119 automated tests (74 unit tests, 45 integration tests) passing with 100% pass rate.
-  - 89% overall test coverage across `src/`.
+  - Financial REST API Routers: All 10 domain routers implemented under `/api/v1/` mapping all domain services.
+  - Data Portability Pipeline: CSV/XLSX statement import wizard with duplicate detection, CSV/XLSX export with spreadsheet formula injection defense, and 11-table JSON user backup export with dry-run validation. Destructive restore is strictly non-executable.
+  - Security Review Finding: `POST /api/v1/auth/enroll` was confirmed vulnerable to unauthenticated account claiming using only an email address. Remediation proposal: replace public HTTP endpoint with an administrative local CLI workflow (`python -m src.cli.enroll`).
+  - Phase 5 Readiness: **BLOCKED** pending user authorization of the `/enroll` remediation.
+  - 119 automated tests (74 unit tests, 45 integration tests) passing with 100% pass rate; 89% code coverage.
   - Ruff (0 errors, all files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 6,770 lines), pip-audit (0 CVE vulnerabilities).
   - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 4 Approval Gate awaiting explicit user authorization to begin Phase 5 execution.**
+- **Execution is halted at the Phase 4 Approval Gate. Phase 5 is NOT started.**
 
 ---
 
