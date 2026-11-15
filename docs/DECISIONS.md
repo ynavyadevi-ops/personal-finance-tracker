@@ -397,6 +397,31 @@
   - Frontend users have complete visual control over goals, debts, investments, and recurring rules.
   - Continuous integration and local testing on Windows must account for loopback socket requirements in sandboxed environments.
 
+---
+
+## ADR-022: Phase 7 Financial Analytics Engine, Plotly Visualizations, and Privacy-First AI Architecture
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 7 requires developing financial analytics, Plotly interactive charts, rule-based explainable insights, and optional AI-assisted summaries, while strictly maintaining user privacy, currency isolation, and accounting invariants.
+- **Decision**:
+  1. **Deterministic Analytics Engine**: Build `src/services/analytics_service.py` (`FinancialAnalyticsEngine`) using exact Decimal calculations. Transfers (`TransactionType.TRANSFER`) are strictly excluded from income and expenses; compensating reversals are netted out; all aggregations are strictly partitioned by currency.
+  2. **Interactive Plotly Visualizer Library**: Build `src/frontend/components/charts.py` generating Plotly figures adhering to the dark fintech design system (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`): income vs. expense grouped bars, cash flow area trends, category spending donuts, budget comparative bars, savings milestone stacks, and investment allocation donuts.
+  3. **Privacy-First AI Architecture**: Build `src/services/ai_insights.py`:
+     - AI insights are strictly disabled by default; explicit user opt-in is required via UI toggle.
+     - Strict data de-identification: strips all PII, account IDs, merchant names, raw descriptions, passwords, and JWT tokens before processing.
+     - Local synthesis generates plain-language observations without third-party cloud leakage.
+     - All AI-generated outputs carry a permanent non-advice disclaimer.
+  4. **Dedicated Analytics View**: Build `src/frontend/views/analytics.py` integrating multi-tab interactive analytics with currency and timeframe filters.
+- **Rationale**:
+  - Guarantees financial mathematical precision conforming to Phase 3 ledger rules.
+  - Protects user confidentiality and complies with privacy-first AI principles.
+  - Provides intuitive visual exploratory tools for personal finance management.
+- **Consequences**:
+  - Users receive rich interactive visual analytics and explainable insights.
+  - Zero external third-party cloud API costs or data leakage risks are introduced.
+
+
 
 
 

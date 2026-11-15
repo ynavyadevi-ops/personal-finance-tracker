@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 6 — Streamlit Frontend Advanced Views (COMPLETED & VERIFIED)
+> **CURRENT PHASE**: Phase 7 — Analytics Engine, Plotly Visualizations & AI Insights (COMPLETED & VERIFIED)
 
 ---
 
@@ -18,18 +18,18 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
 - **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETE & VERIFIED**.
 - **Phase 5 (Streamlit Frontend Core UI & Core Pages)**: **COMPLETE & VERIFIED**.
-- **Phase 6 (Streamlit Frontend Advanced Views)**: **COMPLETED & VERIFIED**.
-  - Implemented 4 modular advanced frontend views:
-    1. **Savings Goals** (`src/frontend/views/goals.py`): Target milestone tracking, funded progress bars, goal contributions and withdrawals, and milestone creation.
-    2. **Loans & Debts** (`src/frontend/views/loans.py`): Loan liability summaries, amortization schedule breakdown (principal, interest, remaining balance), installment repayment recording, and loan obligation creation.
-    3. **Investments** (`src/frontend/views/investments.py`): Prominent valuation disclaimer (historical weighted-average cost basis, zero mock live quotes), portfolio holdings, security buy, security sell with realized capital gains/losses calculation, and dividend receipts.
-    4. **Recurring Rules** (`src/frontend/views/recurring.py`): Due recurring execution alerts with manual ledger posting triggers, rules directory, pause/resume schedule toggles, and schedule creation.
-  - Updated navigation in `src/frontend/app.py` to support all 9 views: Dashboard, Accounts, Transactions, Budgets, Savings Goals, Loans & Debts, Investments, Recurring Rules, and Settings.
-  - Extended `ApiClient` (`src/frontend/api_client.py`) with 17 authenticated endpoints covering advanced feature modules.
-  - Added 8 unit tests across `tests/unit/test_frontend.py` and `tests/unit/test_frontend_views.py`. Total automated test suite stands at **159 passed tests** (100% pass rate in 14.0s, 80% overall test coverage).
-  - Ruff (0 errors, 109 files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 9,429 lines), pip-audit (0 CVE vulnerabilities).
+- **Phase 6 (Streamlit Frontend Advanced Views)**: **COMPLETE & VERIFIED**.
+- **Phase 7 (Analytics Engine, Plotly Visualizations & AI Insights)**: **COMPLETED & VERIFIED**.
+  - Implemented `FinancialAnalyticsEngine` (`src/services/analytics_service.py`) for deterministic cash flow calculations, category spending rollups, monthly trends, account balance distributions, budget vs. actual utilization, savings milestones, and debt paydown metrics.
+  - Implemented Rule-Based Explainable Insights with step-by-step calculation derivations for cash flow health, spending acceleration, budget threshold alerts, and savings goals.
+  - Built interactive Plotly visualization library (`src/frontend/components/charts.py`) adhering to the dark fintech design system (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`): income vs. expense grouped bars, net cash flow area trends, category spending donuts, budget comparative bars, savings milestone stacks, and investment allocation donuts.
+  - Implemented Privacy-First AI Insights Service (`src/services/ai_insights.py`): disabled by default; explicit user opt-in toggle; strict de-identification stripping all PII, account IDs, merchant names, raw descriptions, passwords, and JWT tokens; local narrative synthesis without third-party cloud leakage; mandatory informational non-advice disclaimer.
+  - Implemented dedicated Analytics & Insights View (`src/frontend/views/analytics.py`) with multi-tab structure (Cash Flow & Trends, Category Spending, Budgets & Milestones, Debts & Portfolio, Smart Insights & AI Privacy) and currency/timeframe filters.
+  - Updated sidebar navigation shell (`src/frontend/app.py`, `src/frontend/views/__init__.py`) supporting 10 views seamlessly.
+  - Added 19 comprehensive unit tests across analytics, AI insights, charts, and view rendering. Total automated test suite expanded to **178 passed tests** (100% pass rate in 17.3s, 81% overall test coverage).
+  - Ruff (0 errors, 116 files formatted), Mypy strict (0 errors in 70 files), Bandit SAST (0 issues in 10,625 lines), pip-audit (0 CVE vulnerabilities).
   - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 6 Approval Gate. Phase 7 is NOT started.**
+- **Execution is halted at the Phase 7 Approval Gate. Phase 8 is NOT started.**
 
 ---
 

@@ -8,6 +8,7 @@ from src.frontend.api_client import api_client
 from src.frontend.components.ui import PALETTE, apply_custom_css
 from src.frontend.views import (
     render_accounts_view,
+    render_analytics_view,
     render_budgets_view,
     render_dashboard_view,
     render_goals_view,
@@ -51,7 +52,7 @@ st.sidebar.markdown(
         <span style="font-size: 1.75rem;">💸</span>
         <div>
             <span style="font-size: 1.15rem; font-weight: 700; color: {PALETTE["text"]};">FinanceTracker</span>
-            <div style="font-size: 0.75rem; color: {PALETTE["accent"]}; font-weight: 600;">Phase 6 Advanced Views</div>
+            <div style="font-size: 0.75rem; color: {PALETTE["accent"]}; font-weight: 600;">Phase 7 Analytics & AI</div>
         </div>
     </div>
     """,
@@ -73,6 +74,7 @@ st.sidebar.markdown(
 
 NAV_OPTIONS = [
     "📊 Dashboard",
+    "📈 Analytics & Insights",
     "🏦 Accounts",
     "💳 Transactions",
     "🎯 Budgets",
@@ -125,13 +127,15 @@ if st.sidebar.button("Log Out", key="sidebar_logout_btn", use_container_width=Tr
     api_client.token = None
     st.rerun()
 
-st.sidebar.caption("Personal Finance Tracker • Phase 6")
+st.sidebar.caption("Personal Finance Tracker • Phase 7")
 
 # ==============================================================================
 # ROUTING CONTROLLER
 # ==============================================================================
 if selected_nav == "📊 Dashboard":
     render_dashboard_view()
+elif selected_nav == "📈 Analytics & Insights":
+    render_analytics_view()
 elif selected_nav == "🏦 Accounts":
     render_accounts_view()
 elif selected_nav == "💳 Transactions":

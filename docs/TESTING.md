@@ -286,6 +286,51 @@ A development phase is marked complete ONLY when all gate criteria are met:
 - **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
 - **Database Record Preservation**: `Primary Checking ('USD', 1500.00)` verified untouched in `data/finance.db`. Zero test writes to persistent SQLite storage.
 
+---
+
+## 12. Phase 7 Verification & Test Results (Analytics Engine, Visualizations & AI Insights)
+
+### 12.1 Test Execution Metrics
+- **Total Automated Tests**: 178 passed, 0 failed, 0 skipped (100% pass rate).
+- **Execution Time**: 17.32 seconds.
+- **Overall Code Coverage**: 81% across `src/` (4,748 statements, 904 missed).
+- **Test Distribution (132 Unit, 46 Integration)**:
+  - **Phase 7 Analytics & Visualization Tests (19 new unit tests)**:
+    - `tests/unit/test_analytics_service.py` (8 tests):
+      - `test_cash_flow_calculation_excludes_transfers_and_reversals`: Verified inter-account transfers and reversal transactions are strictly excluded from income and expenses; multi-currency isolation confirmed.
+      - `test_spending_by_category_calculation`: Category expense rollups, proportion sorting, and exact percentage calculations.
+      - `test_monthly_trends_calculation`: Multi-month income, expense, and net cash flow trajectory generation.
+      - `test_account_balance_distribution`: Per-currency account balance percentage allocation without cross-currency summation.
+      - `test_budget_vs_actual_status`: Budget cap evaluation flagging WARNING at $\ge 80\%$ and EXCEEDED when overspent.
+      - `test_savings_progress_calculation`: Milestone target vs current funded amount and achievement completion flags.
+      - `test_investment_cost_basis_summary`: Portfolio historical acquisition cost basis rollups and mandatory disclaimer verification.
+      - `test_generate_rule_based_insights`: Deterministic financial insight generation with transparent derivation steps.
+    - `tests/unit/test_ai_insights.py` (3 tests):
+      - `test_ai_disabled_by_default`: Verified AI narrative is disabled out of the box and prompts for explicit user opt-in.
+      - `test_ai_opt_in_consent_generates_narrative`: Verified opt-in consent generates local synthesized cash flow overview with mandatory non-advice disclaimer.
+      - `test_payload_sanitization_strips_pii_and_credentials`: Verified strict redaction stripping all emails, UUIDs, merchant names, raw descriptions, and JWT tokens.
+    - `tests/unit/test_charts.py` (7 tests):
+      - `test_create_empty_chart`: Clean empty-state figure with user guidance.
+      - `test_create_income_expense_bar_chart`: Grouped bar chart comparing income vs expense series.
+      - `test_create_cash_flow_trend_chart`: Net cash flow line & area trajectory with fill.
+      - `test_create_category_donut_chart`: Donut chart with hole=0.55 and custom hover templates.
+      - `test_create_budget_vs_actual_chart`: Comparative horizontal bar chart for budget caps vs actuals.
+      - `test_create_savings_progress_chart`: Stacked horizontal bar chart for milestone completion.
+      - `test_create_investment_allocation_chart`: Portfolio asset allocation donut chart by cost basis.
+    - `tests/unit/test_frontend_views.py` (+1 test):
+      - `test_render_analytics_view`: Analytics view execution, metric card rendering, Plotly chart generation, and AI opt-in toggle handling.
+  - **Protected Existing Tests (159 tests)**:
+    - All 159 Phase 1–6 regression tests continue to pass with zero regressions.
+
+### 12.2 Static Quality & Security Audits
+- **Ruff Linter**: `ruff check .` -> **0 errors** (all checks passed).
+- **Ruff Formatter**: `ruff format --check .` -> **116 files correctly formatted**.
+- **Mypy Type Checking**: `mypy` -> **Success: no issues found in 70 source files** (strict mode).
+- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (10,625 lines scanned across `src/`).
+- **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
+- **Database Record Preservation**: `Primary Checking ('USD', 1500.00)` verified untouched in `data/finance.db`. Zero test writes to persistent SQLite storage.
+
+
 
 
 

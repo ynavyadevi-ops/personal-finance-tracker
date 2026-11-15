@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock, patch
 
 from src.frontend.views.accounts import render_accounts_view
+from src.frontend.views.analytics import render_analytics_view
 from src.frontend.views.budgets import render_budgets_view
 from src.frontend.views.dashboard import render_dashboard_view
 from src.frontend.views.goals import render_goals_view
@@ -381,3 +382,56 @@ def test_render_recurring_view() -> None:
         render_recurring_view()
         # Verify execution and pause buttons were presented
         assert mock_btn.call_count >= 2
+
+
+def test_render_analytics_view() -> None:
+    """Verify analytics view computes cash flow metrics, renders charts, and handles AI toggle."""
+    mock_txs = {
+        "items": [
+            {
+                "id": "tx-1",
+                "transaction_type": "INCOME",
+                "amount": "50000.00",
+                "currency": "INR",
+                "transaction_date": "2026-11-01",
+                "description": "Salary",
+            },
+            {
+                "id": "tx-2",
+                "transaction_type": "EXPENSE",
+                "amount": "20000.00",
+                "currency": "INR",
+                "transaction_date": "2026-11-02",
+                "description": "Groceries",
+                "category": "Groceries",
+            },
+        ],
+        "meta": {"total": 2},
+    }
+    with (
+        patch("src.frontend.api_client.api_client.list_accounts", return_value=(True, [])),
+        patch(
+            "src.frontend.api_client.api_client.list_transactions", return_value=(True, mock_txs)
+        ),
+        patch("src.frontend.api_client.api_client.list_goals", return_value=(True, [])),
+        patch("src.frontend.api_client.api_client.list_loans", return_value=(True, [])),
+        patch("src.frontend.api_client.api_client.list_holdings", return_value=(True, [])),
+        patch("src.frontend.api_client.api_client.list_recurring_rules", return_value=(True, [])),
+        patch(
+            "src.frontend.api_client.api_client.list_budgets_for_period", return_value=(True, [])
+        ),
+        patch("streamlit.columns", side_effect=_mock_columns),
+        patch("streamlit.selectbox", side_effect=["INR", "Last 6 Months", "All Accounts"]),
+        patch(
+            "streamlit.tabs",
+            return_value=[MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()],
+        ),
+        patch("streamlit.metric") as mock_metric,
+        patch("streamlit.plotly_chart") as mock_plot,
+        patch("streamlit.toggle", return_value=True),
+    ):
+        render_analytics_view()
+        # Metric cards called for Income, Expense, Net Flow, Savings Rate
+        assert mock_metric.call_count >= 4
+        # Plotly charts rendered
+        assert mock_plot.call_count >= 1

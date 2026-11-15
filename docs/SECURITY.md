@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SECURITY.md`  
 > **STATUS**: ENFORCED & ACTIVE  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Pydantic v2, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 5 — Streamlit Frontend Core UI & Core Pages (COMPLETED)
+> **CURRENT PHASE**: Phase 7 — Analytics Engine, Plotly Visualizations & AI Insights (COMPLETED)
 
 ---
 
@@ -279,6 +279,33 @@ The Phase 5 Streamlit frontend architecture enforces multi-layered UI security d
 - **Database**: PyPI Vulnerability Database & PyPA Advisory DB
 - **Scope**: All locked production and development dependencies
 - **Result**: **0 Known Vulnerabilities Found**
+
+---
+
+## 14. Privacy-First AI Insights & Data De-identification Policy (Phase 7)
+
+### 14.1 Core AI Security Principles
+1. **Explicit User Opt-In (Disabled by Default)**:
+   - AI financial insights are strictly disabled by default upon application initialization.
+   - Requires explicit toggle activation by the authenticated user in the UI. Users may disable AI insights at any time.
+2. **Zero PII & Credential Leakage**:
+   - Before any metric payload is passed to AI synthesis routines, `PrivacySafeAiInsightsService.sanitize_for_ai_payload()` completely strips:
+     - User UUIDs, names, and email addresses.
+     - Account IDs, account numbers, and institution names.
+     - Raw transaction descriptions and merchant identifiers.
+     - Passwords, JWT access tokens, and API keys.
+3. **Aggregated Proportions Only**:
+   - The payload format is restricted strictly to high-level monthly income/expense totals and top-5 category percentage allocations (e.g. `{"monthly_income_band": "50000.00", "top_expense_proportions": [{"category": "Housing", "percentage": 45.0}]}`).
+4. **Local Rule-Based Synthesis & Zero Outbound Calls**:
+   - In adherence to Phase 7 scope boundaries, financial narratives are generated locally and deterministically.
+   - Zero outbound HTTP/API calls are dispatched to external cloud AI vendors without explicit user consent and separate architectural approval.
+5. **Mandatory Non-Advice Disclaimer**:
+   - All AI-generated text is permanently paired with the notice:
+     *"AI-assisted observations are generated for informational and planning purposes only, may contain inaccuracies, and do not constitute certified or regulated financial advice."*
+6. **Static Analysis & Supply Chain Verification (Phase 7)**:
+   - **Bandit SAST**: 10,625 lines of application code scanned across `src/`; **0 issues identified**.
+   - **pip-audit**: 0 known vulnerabilities.
+
 
 
 

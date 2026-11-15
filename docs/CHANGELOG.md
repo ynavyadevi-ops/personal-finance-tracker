@@ -9,10 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 7 (Advanced Analytics, Reporting & Insights)
-- Implement Financial Analytics Engine: cash flow forecasting, net worth trajectories, and spending trends.
-- Implement advanced multi-period reporting and exportable financial summary packets.
-- Implement heuristic / rule-based anomaly detection for unusual charges and spending spikes.
+### Planned for Phase 8 (System Hardening, Comprehensive Testing, Packaging & Release)
+- Production container packaging (Dockerfile & docker-compose).
+- Final end-to-end stress tests and database migration rollback dry-runs.
+- Automated release packaging and operational runbooks.
+
+---
+
+## [0.8.0] - 2026-11-15 (Phase 7: Analytics Engine, Plotly Visualizations & AI Insights)
+
+### Added
+- **Financial Analytics Engine (`src/services/analytics_service.py`)**:
+  - Pure Python & Decimal calculations enforcing double-entry rules: transfers are strictly excluded from income and expenses, reversals are handled without data skew, and multi-currency metrics are rigorously isolated.
+  - Computes monthly cash flow, category spending distributions, 6-month and 12-month trend trajectories, account balance distributions, budget vs. actual utilization, savings milestones, and debt paydowns.
+- **Rule-Based Deterministic Insights (`src/services/analytics_service.py`)**:
+  - Deterministic financial observations on cash flow health, spending acceleration, budget caps, savings targets, and debt milestones, with transparent step-by-step calculation derivations.
+- **Plotly Visualizer Component Library (`src/frontend/components/charts.py`)**:
+  - Implemented reusable dark fintech chart builders:
+    - Grouped bar charts for monthly income vs. expenses (`create_income_expense_bar_chart`).
+    - Area & scatter charts for net cash flow trajectories (`create_cash_flow_trend_chart`).
+    - Donut charts for category expense distribution (`create_category_donut_chart`) with custom hover templates.
+    - Horizontal comparative bar charts for budget caps vs. actuals (`create_budget_vs_actual_chart`).
+    - Stacked horizontal bar charts for savings milestone completion (`create_savings_progress_chart`).
+    - Donut charts for portfolio asset allocation by cost basis (`create_investment_allocation_chart`).
+- **Privacy-First AI Insights Service (`src/services/ai_insights.py`)**:
+  - Strict privacy protections: disabled by default with mandatory user opt-in consent toggle.
+  - De-identification pipeline: strips all PII, account IDs, merchant names, raw descriptions, passwords, and JWT tokens before processing.
+  - Local synthesis generating plain-language observations without third-party cloud leakage.
+  - Mandatory informational non-advice disclaimer permanently attached.
+- **Dedicated Analytics View (`src/frontend/views/analytics.py`)**:
+  - Multi-tab interactive view covering Cash Flow & Trends, Category Spending, Budgets & Milestones, Debts & Portfolio, and Smart Insights & AI Privacy, with currency and timeframe filters.
+- **Navigation Shell Update (`src/frontend/app.py`, `src/frontend/views/__init__.py`)**:
+  - Added "📈 Analytics & Insights" to sidebar navigation, supporting 10 views seamlessly.
+- **Automated Test Suite Expansion (`tests/unit/test_analytics_service.py`, `tests/unit/test_ai_insights.py`, `tests/unit/test_charts.py`)**:
+  - Added 19 comprehensive unit tests covering financial analytics math, transfer exclusion, reversal handling, AI privacy boundaries, and Plotly figure generation.
+  - Total test suite expanded to 178 passing tests with 81% overall coverage.
 
 ---
 

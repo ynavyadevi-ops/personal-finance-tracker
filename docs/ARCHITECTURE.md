@@ -164,12 +164,22 @@ personal-expense-tracker/
   - `@st.cache_data(ttl=60)` caches heavy analytical aggregations and static category metadata.
   - Mutations (adding a transaction) invalidate relevant caches via explicit cache clear keys.
 
-### Data Visualizations (Plotly + Pandas)
-- Analytical data fetched from FastAPI is converted into Pandas DataFrames.
-- **Plotly Express / Graph Objects** render high-fidelity, interactive charts:
-  - Donut charts for category expense distribution.
-  - Multi-series bar charts for Income vs. Expense comparisons.
-  - Area charts for historical Net Worth progression.
+### Data Visualizations & Analytics Engine (Plotly + Pandas + Decimal)
+- **Financial Analytics Engine (`src/services/analytics_service.py`)**:
+  - Pure Python & Decimal calculations enforcing double-entry rules: transfers are strictly excluded from income and expenses, reversals are handled without data skew, and multi-currency metrics are rigorously isolated.
+  - Computes monthly cash flow, category spending distributions, 6-month and 12-month trend trajectories, account balance distributions, budget vs. actual utilization, savings milestones, and loan repayment breakdowns.
+- **Plotly Visualizer Library (`src/frontend/components/charts.py`)**:
+  - Implements reusable, high-fidelity Plotly Graph Objects styled with the dark fintech design system (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`):
+    - Donut charts for category expense distribution (`create_category_donut_chart`) with custom hover tooltips.
+    - Grouped bar charts for Income vs. Expense monthly comparisons (`create_income_expense_bar_chart`).
+    - Area & scatter charts for net cash flow trajectories (`create_cash_flow_trend_chart`).
+    - Horizontal comparative bar charts for Budget Caps vs. Actuals (`create_budget_vs_actual_chart`).
+    - Stacked bar charts for Savings Milestone completion (`create_savings_progress_chart`).
+    - Donut charts for Portfolio Allocation by historical cost basis (`create_investment_allocation_chart`).
+- **Privacy-First AI Insights Service (`src/services/ai_insights.py`)**:
+  - Disabled by default; requires explicit user opt-in toggle.
+  - Strict data de-identification: strips all PII, account IDs, merchant names, raw descriptions, and credentials before constructing analytics prompts.
+  - Synthesizes narrative observations locally using high-level aggregated totals without third-party cloud leakage. Mandatory informational disclaimer attached.
 
 ---
 

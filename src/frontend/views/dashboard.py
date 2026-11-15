@@ -10,6 +10,10 @@ import pandas as pd
 import streamlit as st
 
 from src.frontend.api_client import api_client
+from src.frontend.components.charts import (
+    create_category_donut_chart,
+    create_income_expense_bar_chart,
+)
 from src.frontend.components.ui import (
     PALETTE,
     format_money,
@@ -17,6 +21,7 @@ from src.frontend.components.ui import (
     render_empty_state,
     render_header,
 )
+from src.services.analytics_service import analytics_engine
 
 
 def render_dashboard_view() -> None:
@@ -179,6 +184,32 @@ def render_dashboard_view() -> None:
             """,
             unsafe_allow_html=True,
         )
+
+    # Interactive Visual Trends (Plotly)
+    if transactions_list:
+        with st.expander("📊 Interactive Visual Trends", expanded=False):
+            col_dash_c1, col_dash_c2 = st.columns(2)
+            dash_curr_txs = [
+                t
+                for t in transactions_list
+                if (t.get("currency") or "INR").strip().upper() == display_curr
+            ]
+            dash_monthly = analytics_engine.calculate_monthly_trends(
+                dash_curr_txs, currency=display_curr, months_count=6
+            )
+            dash_cats = analytics_engine.calculate_spending_by_category(
+                dash_curr_txs, currency=display_curr
+            )
+            with col_dash_c1:
+                st.plotly_chart(
+                    create_income_expense_bar_chart(dash_monthly, display_curr),
+                    use_container_width=True,
+                )
+            with col_dash_c2:
+                st.plotly_chart(
+                    create_category_donut_chart(dash_cats, display_curr),
+                    use_container_width=True,
+                )
 
     st.markdown("<hr style='border-color: #334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
 
