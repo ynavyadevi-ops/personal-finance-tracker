@@ -24,6 +24,7 @@
 - [ADR-013: Default Currency Selection (Indian Rupee - INR / ₹)](#adr-013-default-currency-selection-indian-rupee---inr---)
 - [ADR-014: Authoritative Nine-Phase Roadmap (Phases 0–8)](#adr-014-authoritative-nine-phase-roadmap-phases-08)
 - [ADR-015: Protected Status for Existing Financial Account CRUD](#adr-015-protected-status-for-existing-financial-account-crud)
+- [ADR-016: Relational Schema Architecture, Double-Entry Ledger Representation, and Decimal Precision Storage](#adr-016-relational-schema-architecture-double-entry-ledger-representation-and-decimal-precision-storage)
 
 ---
 
@@ -264,3 +265,25 @@
   - Backed by 15 dedicated unit and integration regression tests verifying creation, duplicate conflicts, not-found handling, multi-tenant isolation, updating, and soft-delete archiving.
 - **Consequences**:
   - Future phases build directly upon the existing `AccountService`, `AccountRepository`, and accounts REST router.
+
+---
+
+## ADR-016: Relational Schema Architecture, Double-Entry Ledger Representation, and Decimal Precision Storage
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 2 requires designing the full relational database foundation supporting multiple accounts, income/expense flows, inter-account transfers, budgets, goals, loan debts, recurring schedules, investments, and audit histories, compatible with both local SQLite and production PostgreSQL.
+- **Decision**:
+  1. **Normalized Double-Entry Ledger**: Implement `Transaction` as the high-level business event, paired with balanced `TransactionEntry` lines representing debit and credit ledger rows associated with specific `FinancialAccount` records.
+  2. **Decimal Precision Rules**: Store all monetary values as `Numeric(18, 2)` (supporting sums up to 10 quadrillion with 2 decimal places). Store investment quantities as `Numeric(18, 4)` to support fractional share transactions, mutual fund units, and gold gram quantities.
+  3. **Engine-Level Integrity**: Enforce explicit check constraints (`amount > 0`, month bounds `1 <= month <= 12`, non-negative balances and quantities) directly in the database DDL.
+  4. **Deletion Protection**: Enforce `ON DELETE RESTRICT` on foreign keys from ledger lines, loan debts, and investment transactions to accounts, preventing catastrophic cascade deletion of accounts containing audit histories.
+  5. **Cross-Dialect Compatibility**: Configure SQLEnum columns with `native_enum=False` to store string representations with check constraints, ensuring seamless dual-database execution across SQLite and PostgreSQL without dialect-specific DDL scripts. Use `render_as_batch=True` in Alembic for SQLite table alterations.
+- **Rationale**:
+  - Double-entry ledger architecture guarantees mathematical conservation of funds across transfers and multi-account transactions.
+  - Check constraints protect against corrupted data injection regardless of application-layer bypass.
+  - `Numeric(18, 4)` precision ensures full support for Indian mutual funds (where NAV and units are measured to 4 decimals) and fractional crypto/gold assets.
+- **Consequences**:
+  - Phase 3 accounting services can rely on balanced ledger rows and atomic transfers without ad-hoc single-column balance drift.
+  - Foreign key restrict requires accounts with transactions to be archived rather than hard-deleted, maintaining complete auditability.
+

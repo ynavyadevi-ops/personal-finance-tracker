@@ -11,6 +11,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.db.base import Base, TimestampMixin, generate_uuid
 
 if TYPE_CHECKING:
+    from src.db.models.investment import InvestmentHolding, InvestmentTransaction
+    from src.db.models.loan import LoanDebt
+    from src.db.models.recurring import RecurringRule
+    from src.db.models.transaction import TransactionEntry
     from src.db.models.user import User
 
 
@@ -74,6 +78,23 @@ class FinancialAccount(Base, TimestampMixin):
     # Relationships
     user: Mapped["User"] = relationship(
         back_populates="accounts",
+    )
+    transaction_entries: Mapped[list["TransactionEntry"]] = relationship(
+        back_populates="account",
+    )
+    loans: Mapped[list["LoanDebt"]] = relationship(
+        back_populates="account",
+    )
+    recurring_rules: Mapped[list["RecurringRule"]] = relationship(
+        "RecurringRule",
+        foreign_keys="RecurringRule.account_id",
+        back_populates="account",
+    )
+    investment_holdings: Mapped[list["InvestmentHolding"]] = relationship(
+        back_populates="account",
+    )
+    investment_transactions: Mapped[list["InvestmentTransaction"]] = relationship(
+        back_populates="account",
     )
 
     __table_args__ = (

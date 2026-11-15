@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SPEC.md`  
 > **STATUS**: BASELINE APPROVED  
 > **STACK**: Python (FastAPI, Streamlit, SQLAlchemy, Alembic, Pydantic, Pandas, Plotly)  
-> **PHASE**: Phase 0 — Foundation and Documentation
+> **PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
 
 ---
 
@@ -162,3 +162,76 @@ flowchart TD
 - **Given** a user has 150 transactions recorded in 2026
 - **When** the user filters for "October 2026" and clicks "Export to CSV"
 - **Then** a valid RFC 4180 CSV file is downloaded containing the October transactions with columns: `Date`, `Account`, `Type`, `Category`, `Payee`, `Amount`, `Notes`, `Tags`.
+
+---
+
+## 7. Data Dictionary (Phase 2 Relational Entities)
+
+| Table | Column | Type | Nullable | Constraints / Defaults | Description |
+|---|---|---|---|---|---|
+| `users` | `id` | VARCHAR(36) | No | PK, UUID | Unique user identifier |
+| `users` | `email` | VARCHAR(255) | Yes | UNIQUE, INDEX | Optional user email address |
+| `users` | `name` | VARCHAR(100) | No | INDEX | User display name |
+| `financial_accounts` | `id` | VARCHAR(36) | No | PK, UUID | Unique account identifier |
+| `financial_accounts` | `user_id` | VARCHAR(36) | No | FK(`users.id`), CASCADE, INDEX | Tenant owner reference |
+| `financial_accounts` | `name` | VARCHAR(100) | No | None | Account label (e.g. Primary Checking) |
+| `financial_accounts` | `account_type` | VARCHAR(20) | No | ENUM (CHECKING, SAVINGS, CREDIT_CARD, CASH, INVESTMENT, LOAN) | Financial account category |
+| `financial_accounts` | `currency` | VARCHAR(3) | No | Default: `'INR'` | ISO currency code |
+| `financial_accounts` | `opening_balance` | NUMERIC(18, 2) | No | Default: `0.00` | Initial balance at account creation |
+| `financial_accounts` | `is_active` | BOOLEAN | No | Default: `True`, INDEX | Soft deletion/active state toggle |
+| `categories` | `id` | VARCHAR(36) | No | PK, UUID | Unique category identifier |
+| `categories` | `user_id` | VARCHAR(36) | Yes | FK(`users.id`), CASCADE, INDEX | Owner user (NULL for system defaults) |
+| `categories` | `parent_id` | VARCHAR(36) | Yes | FK(`categories.id`), CASCADE, INDEX | Self-referential parent category |
+| `categories` | `name` | VARCHAR(100) | No | UNIQUE(`user_id`, `name`, `parent_id`) | Category name |
+| `categories` | `category_type` | VARCHAR(10) | No | ENUM (INCOME, EXPENSE) | Inflow vs Outflow category |
+| `categories` | `color` | VARCHAR(7) | No | Hex color code | UI visual accent |
+| `categories` | `icon` | VARCHAR(50) | Yes | Icon identifier | UI icon display |
+| `categories` | `is_default` | BOOLEAN | No | Default: `False`, INDEX | Flag indicating standard system category |
+| `transactions` | `id` | VARCHAR(36) | No | PK, UUID | Unique transaction event identifier |
+| `transactions` | `user_id` | VARCHAR(36) | No | FK(`users.id`), CASCADE, INDEX | Tenant owner reference |
+| `transactions` | `transaction_date` | DATE | No | INDEX | Event posting date |
+| `transactions` | `transaction_type` | VARCHAR(10) | No | ENUM (INCOME, EXPENSE, TRANSFER) | High-level transaction flow type |
+| `transactions` | `description` | VARCHAR(255) | No | None | Transaction memo / description |
+| `transactions` | `amount` | NUMERIC(18, 2) | No | Check: `amount > 0` | Total monetary event magnitude |
+| `transactions` | `currency` | VARCHAR(3) | No | Default: `'INR'` | ISO currency code |
+| `transactions` | `recurring_rule_id` | VARCHAR(36) | Yes | FK(`recurring_rules.id`), SET NULL | Linked recurring rule template |
+| `transaction_entries` | `id` | VARCHAR(36) | No | PK, UUID | Individual double-entry ledger line |
+| `transaction_entries` | `transaction_id` | VARCHAR(36) | No | FK(`transactions.id`), CASCADE, INDEX | Parent transaction event |
+| `transaction_entries` | `account_id` | VARCHAR(36) | No | FK(`financial_accounts.id`), RESTRICT | Impacted financial account |
+| `transaction_entries` | `category_id` | VARCHAR(36) | Yes | FK(`categories.id`), SET NULL | Optional category allocation |
+| `transaction_entries` | `entry_type` | VARCHAR(10) | No | ENUM (DEBIT, CREDIT) | Balance direction |
+| `transaction_entries` | `amount` | NUMERIC(18, 2) | No | Check: `amount > 0` | Ledger entry amount |
+| `budgets` | `id` | VARCHAR(36) | No | PK, UUID | Unique budget identifier |
+| `budgets` | `user_id` | VARCHAR(36) | No | FK(`users.id`), CASCADE, INDEX | Tenant owner reference |
+| `budgets` | `category_id` | VARCHAR(36) | No | FK(`categories.id`), CASCADE, INDEX | Budgeted category |
+| `budgets` | `month` | INTEGER | No | Check: `1 <= month <= 12` | Calendar month (1-12) |
+| `budgets` | `year` | INTEGER | No | None | Calendar year (e.g. 2026) |
+| `budgets` | `amount` | NUMERIC(18, 2) | No | Check: `amount > 0` | Spending cap limit |
+| `savings_goals` | `id` | VARCHAR(36) | No | PK, UUID | Unique savings goal identifier |
+| `savings_goals` | `user_id` | VARCHAR(36) | No | FK(`users.id`), CASCADE, INDEX | Tenant owner reference |
+| `savings_goals` | `target_amount` | NUMERIC(18, 2) | No | Check: `target_amount > 0` | Milestone target amount |
+| `savings_goals` | `current_amount` | NUMERIC(18, 2) | No | Check: `current_amount >= 0` | Accumulated savings |
+| `savings_goals` | `is_achieved` | BOOLEAN | No | Default: `False`, INDEX | Goal completion status |
+| `loan_debts` | `id` | VARCHAR(36) | No | PK, UUID | Unique loan liability identifier |
+| `loan_debts` | `user_id` | VARCHAR(36) | No | FK(`users.id`), CASCADE, INDEX | Tenant owner reference |
+| `loan_debts` | `account_id` | VARCHAR(36) | No | FK(`financial_accounts.id`), RESTRICT | Dedicated loan account |
+| `loan_debts` | `principal_amount` | NUMERIC(18, 2) | No | Check: `principal_amount > 0` | Original borrowed principal |
+| `loan_debts` | `remaining_balance` | NUMERIC(18, 2) | No | Check: `remaining_balance >= 0` | Current outstanding debt |
+| `loan_debts` | `interest_rate` | NUMERIC(5, 2) | No | Check: `interest_rate >= 0` | Annual interest rate percentage |
+| `loan_payment_schedules` | `id` | VARCHAR(36) | No | PK, UUID | Amortization instalment entry |
+| `loan_payment_schedules` | `loan_id` | VARCHAR(36) | No | FK(`loan_debts.id`), CASCADE, INDEX | Linked loan obligation |
+| `loan_payment_schedules` | `payment_number` | INTEGER | No | Check: `payment_number > 0` | Instalment number (1, 2, ...) |
+| `loan_payment_schedules` | `total_payment` | NUMERIC(18, 2) | No | Check: `total_payment > 0` | Total EMI instalment amount |
+| `recurring_rules` | `id` | VARCHAR(36) | No | PK, UUID | Scheduled recurrence template |
+| `recurring_rules` | `account_id` | VARCHAR(36) | No | FK(`financial_accounts.id`), RESTRICT | Originating account |
+| `recurring_rules` | `amount` | NUMERIC(18, 2) | No | Check: `amount > 0` | Recurring amount |
+| `recurring_rules` | `frequency` | VARCHAR(20) | No | ENUM (DAILY, WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY) | Recurrence periodicity |
+| `investment_assets` | `id` | VARCHAR(36) | No | PK, UUID | Security master identifier |
+| `investment_assets` | `symbol` | VARCHAR(20) | No | UNIQUE, INDEX | Ticker symbol (e.g. NIFTYBEES) |
+| `investment_assets` | `asset_type` | VARCHAR(20) | No | ENUM (EQUITY, MUTUAL_FUND, ETF, BOND, GOLD, CRYPTO, OTHER) | Asset class |
+| `investment_holdings` | `id` | VARCHAR(36) | No | PK, UUID | User position in a security |
+| `investment_holdings` | `quantity` | NUMERIC(18, 4) | No | Check: `quantity >= 0` | Unit holdings with 4 decimal places |
+| `investment_holdings` | `cost_basis_per_unit` | NUMERIC(18, 2) | No | Check: `cost_basis_per_unit >= 0` | Average purchase cost per unit |
+| `investment_transactions` | `id` | VARCHAR(36) | No | PK, UUID | Security buy/sell/dividend ledger |
+| `audit_logs` | `id` | VARCHAR(36) | No | PK, UUID | Append-only immutable audit entry |
+

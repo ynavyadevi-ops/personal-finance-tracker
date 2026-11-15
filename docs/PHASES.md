@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/PHASES.md`  
 > **STATUS**: AUTHORITATIVE BASELINE  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT ACTIVE PHASE**: Phase 1 Remediation (COMPLETED — Awaiting Phase 2 Approval)
+> **CURRENT ACTIVE PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED — Awaiting Phase 3 Approval Gate)
 
 ---
 
@@ -65,30 +65,40 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
 
 ---
 
-## Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations (NEXT PHASE — AWAITING APPROVAL)
+## Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
 
-- **Objective**: Implement comprehensive SQLAlchemy 2.0 declarative models for all approved entities, configure Alembic migrations for dual-database (SQLite local, PostgreSQL production), and expand seed scripts.
-- **Dependencies**: Phase 1 explicit approval.
-- **Explicit Scope**:
+- **Objective**: Implement comprehensive SQLAlchemy 2.0 declarative models for all approved entities, configure Alembic migrations with SQLite batch mode and PostgreSQL compatibility, and expand seed scripts.
+- **Dependencies**: Phase 1 explicit approval (granted).
+- **Status**: **COMPLETE & VERIFIED**.
+- **Delivered Scope**:
   - Full relational data models (`src/db/models/`):
-    - `User`: Identity, authentication credentials, settings, preferences.
-    - `FinancialAccount`: Depository, credit, cash, loan, and investment accounts with `Numeric(18, 2)` balances and currency.
-    - `Category`: Hierarchical income and expense categories with color codes and icons.
-    - `Transaction`: Double-entry inspired ledger records with type (`INCOME`, `EXPENSE`, `TRANSFER`), amounts, tags, and payee.
-    - `Budget`: Monthly category expenditure caps and rollover policies.
-    - `SavingsGoal`: Target amounts, target dates, current allocated balance, and milestone tracking.
-    - `LoanDebtSchedule`: Principal, interest rate, term, minimum payments, and amortization tracking.
-    - `InvestmentHolding`: Asset symbol, name, asset class (Equity, Mutual Fund, ETF, Gold), quantity, cost basis, valuation tracking, and account foreign keys.
-    - `RecurringRule`: Automated schedules (daily, weekly, monthly, annual) for recurring bills and income.
-    - `AuditLog`: Immutable change ledger tracking all balance-altering financial mutations.
-  - Alembic migration scripts: autogenerate and review migrations for both SQLite and PostgreSQL dialects.
-  - Database seeder update (`src/db/seed.py`): Populate default Indian categories, standard recurring rule samples, and sample goals.
-- **Expected Deliverables**: Tested Alembic migration revision, updated `data/finance.db`, and functional seed scripts.
-- **Automated Tests**: Pytest tests for schema validation, foreign key cascades, unique constraints, and migration upgrade/downgrade round-trips.
-- **Security Audit**: Bandit scan verifies zero SQL injection vulnerabilities in model definitions and queries.
-- **Dependency Audit**: `pip-audit` scan.
-- **Acceptance Criteria**: `alembic upgrade head` executes cleanly on SQLite and PostgreSQL; seed script executes; model tests pass.
-- **Approval Gate**: Explicit user approval required to proceed to Phase 3.
+    - `User`: Identity, authentication credentials, settings, preferences, back-populating relationships to all domain entities.
+    - `FinancialAccount`: Depository, credit, cash, loan, and investment accounts with `Numeric(18, 2)` balances, default INR currency, and deletion restricted by historical entries.
+    - `Category`: Self-referential hierarchy (`parent_id`), income/expense types, visual colors, icons, default system categories, and uniqueness on `(user_id, name, parent_id)`.
+    - `Transaction`: Business events (income, expense, transfer) with check constraint `amount > 0`.
+    - `TransactionEntry`: Balanced double-entry line items with account references (`ON DELETE RESTRICT`), debit/credit direction, and check constraint `amount > 0`.
+    - `Budget`: Monthly category allocations with `1 <= month <= 12` check, `amount > 0` check, and period uniqueness `(user_id, category_id, month, year)`.
+    - `SavingsGoal`: Target amounts (`target_amount > 0`), current progress (`current_amount >= 0`), milestone target dates, and achieved toggle.
+    - `LoanDebt` & `LoanPaymentSchedule`: Liability terms, positive principal check, non-negative remaining balance and interest rate checks, positive term months check, and ordered payment schedule entries with uniqueness on `(loan_id, payment_number)`.
+    - `RecurringRule`: Periodic rules (daily, weekly, monthly, quarterly, yearly), interval check (`"interval" > 0`), positive amount check (`amount > 0`), and next occurrence indexing.
+    - `InvestmentAsset`, `InvestmentHolding`, `InvestmentTransaction`: Asset catalog (Equity, Mutual Fund, ETF, Bond, Gold, Crypto), holdings with 4-decimal quantity precision (`Numeric(18, 4)`), non-negative check constraints, uniqueness on `(user_id, account_id, asset_id)`, and trade operation history.
+    - `AuditLog`: Immutable change ledger tracking entity mutations, old/new value JSON snapshots, IP address, and user agent.
+  - Alembic migration `472e31906438_create_phase_2_relational_models.py`:
+    - Clean upgrade from base to head creating all 15 tables with explicit constraint names.
+    - Verified upgrade applied to `data/finance.db`, preserving the existing USD primary checking account without modification.
+    - Tested downgrade and re-upgrade cycle on an isolated temporary database.
+  - Database seeder update (`src/db/seed.py`):
+    - 13 standard default Indian categories seeded (Salary, Investments, Housing, Groceries, Utilities, etc.).
+    - Default sample investment asset (`NIFTYBEES`) and sample savings goal (`Emergency Fund`) seeded idempotently.
+- **Verification & Tests**:
+  - 41 automated tests passing (31 unit, 10 integration, 100% pass rate).
+  - 89% code coverage across `src/`.
+  - Ruff: 0 lint errors, 48 files formatted.
+  - Mypy: 0 type issues across 36 source files.
+  - Bandit: 0 security issues across 2,628 lines scanned.
+  - pip-audit: 0 known vulnerabilities.
+  - Runtime probes: FastAPI `/health` (200 OK), Streamlit `/_stcore/health` (200 OK).
+- **Approval Gate**: Stopped at Phase 2 completion gate. Explicit user approval required to proceed to Phase 3.
 
 ---
 

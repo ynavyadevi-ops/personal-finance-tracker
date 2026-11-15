@@ -22,8 +22,9 @@ if config.config_file_name is not None:
 # Set model metadata for autogenerate support
 target_metadata = Base.metadata
 
-# Override database URL with application settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Override database URL with application settings or environment override
+db_url = os.environ.get("DATABASE_URL") or settings.DATABASE_URL
+config.set_main_option("sqlalchemy.url", db_url)
 
 
 def run_migrations_offline() -> None:

@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SECURITY.md`  
 > **STATUS**: ENFORCED & ACTIVE  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Pydantic v2, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 1 — Environment and Application Foundation (COMPLETED)
+> **CURRENT PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
 
 ---
 
@@ -131,3 +131,33 @@ pip-audit --desc
 ### 7.3 Financial Precision Audit
 - Verified that no floating-point conversions or operations occur in `src/core/money.py`, `src/schemas/account.py`, `src/db/models/account.py`, or `src/services/account_service.py`.
 - Base-10 `decimal.Decimal` and SQL `Numeric(18, 2)` enforced on all balance calculations and payloads.
+
+---
+
+## 8. Phase 2 Database Security & Data Integrity Safeguards
+
+The Phase 2 database modeling implementation establishes multi-layered integrity defenses:
+
+1. **Engine-Level Check Constraints**:
+   - `chk_transactions_positive_amount`: Enforces `amount > 0` on transaction events.
+   - `chk_transaction_entries_positive_amount`: Enforces `amount > 0` on ledger line items.
+   - `chk_budgets_valid_month`: Rejects invalid calendar months (`1 <= month <= 12`).
+   - `chk_budgets_positive_amount`: Rejects non-positive budget allocations (`amount > 0`).
+   - `chk_savings_goals_positive_target` & `chk_savings_goals_non_negative_current`: Guarantees target is positive and current savings never dip below zero.
+   - `chk_loan_debts_positive_principal`, `chk_loan_debts_non_negative_remaining`, `chk_loan_debts_non_negative_interest`, `chk_loan_debts_positive_term`: Prohibits corrupt financial liability structures.
+   - `chk_holdings_non_negative_qty`, `chk_holdings_non_negative_cost_basis`, `chk_holdings_non_negative_total_cost`: Prevents negative portfolio quantities or costs.
+   - `chk_inv_tx_non_negative_qty`, `chk_inv_tx_non_negative_price`, `chk_inv_tx_non_negative_amount`, `chk_inv_tx_non_negative_fees`: Validates investment ledger invariants.
+
+2. **Foreign Key Deletion Restrictions (`RESTRICT`)**:
+   - `transaction_entries.account_id` uses `ON DELETE RESTRICT` to prevent deleting any financial account that contains historical double-entry ledger lines.
+   - `loan_debts.account_id` uses `ON DELETE RESTRICT` to prevent deleting accounts tied to active loans.
+   - `investment_holdings.account_id` and `investment_holdings.asset_id` use `ON DELETE RESTRICT` to protect active positions from orphan deletions.
+   - `investment_transactions.account_id` and `investment_transactions.asset_id` use `ON DELETE RESTRICT` to preserve immutable trade histories.
+
+3. **Tenant Scoping & Cascading Erasure**:
+   - Every domain table references `users.id` via `ON DELETE CASCADE`. If a user account is deleted, all personal financial data is completely erased from all 12 tables in a single cascade, preventing orphan data remnants.
+
+4. **Immutable Audit Trail (`audit_logs`)**:
+   - Dedicated `audit_logs` table stores JSON snapshots of state mutations (`old_values`, `new_values`), action type, timestamp, IP address, and user agent.
+   - The table does not expose update or delete relationships, ensuring audit record immutability.
+

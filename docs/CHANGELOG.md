@@ -9,11 +9,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)
-- Complete SQLAlchemy 2.0 relational models: `User`, `FinancialAccount` (with all account types), `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `InvestmentHolding`, `RecurringRule`, `AuditLog`.
-- Dual-database Alembic migrations supporting both SQLite and PostgreSQL.
-- Seeding script expansion for standard categories, recurring rules, and sample goals.
-- Model-level regression tests for cascades, indexes, and precision.
+### Planned for Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)
+- Implement domain transaction service supporting double-entry accounting entries.
+- Implement atomic inter-account transfer execution with debit/credit balance adjustment.
+- Implement monthly category budget tracking, calculation of utilization percentages, and rollover logic.
+- Implement savings goal contribution tracking and progress calculations.
+- Implement loan repayment schedules and amortization logic.
+- Implement recurring transaction rule processing queue.
+
+---
+
+## [0.3.0] - 2026-11-15 (Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations)
+
+### Added
+- **Complete Relational Domain Models (`src/db/models/`)**:
+  - `src/db/models/category.py`: `Category` with self-referential hierarchy (`parent_id`), `CategoryType` (`INCOME`, `EXPENSE`), visual colors, icons, and unique constraint `uq_categories_user_name_parent`.
+  - `src/db/models/transaction.py`: `Transaction` business events and `TransactionEntry` double-entry ledger line items with `EntryType` (`DEBIT`, `CREDIT`), `TransactionType` (`INCOME`, `EXPENSE`, `TRANSFER`), `ondelete="RESTRICT"` on accounts, and positive amount check constraints (`chk_transactions_positive_amount`, `chk_transaction_entries_positive_amount`).
+  - `src/db/models/budget.py`: `Budget` monthly category allocation with month check (`1 <= month <= 12`), positive amount check, and period uniqueness `uq_budgets_user_cat_period`.
+  - `src/db/models/goal.py`: `SavingsGoal` milestone tracking with positive target and non-negative current amount check constraints.
+  - `src/db/models/loan.py`: `LoanDebt` and `LoanPaymentSchedule` models with `InterestType` (`FIXED`, `FLOATING`), positive principal check, non-negative remaining balance and interest checks, positive term months check, and ordered amortization schedule entries with uniqueness `uq_loan_schedules_loan_number`.
+  - `src/db/models/recurring.py`: `RecurringRule` with `Frequency` (`DAILY`, `WEEKLY`, `BIWEEKLY`, `MONTHLY`, `QUARTERLY`, `YEARLY`), interval check constraint (`"interval" > 0`), and positive amount check constraint.
+  - `src/db/models/investment.py`: Comprehensive investment models:
+    - `InvestmentAsset`: Master security catalog with `AssetType` (`EQUITY`, `MUTUAL_FUND`, `ETF`, `BOND`, `GOLD`, `CRYPTO`, `OTHER`), unique symbol and ISIN.
+    - `InvestmentHolding`: User positions with 4-decimal quantity precision (`Numeric(18, 4)`), cost basis, total cost, and uniqueness on `(user_id, account_id, asset_id)`.
+    - `InvestmentTransaction`: Trade ledger with `InvestmentTxType` (`BUY`, `SELL`, `DIVIDEND`, `SPLIT`, `INTEREST`), linked transaction reference, and non-negative constraints.
+  - `src/db/models/audit.py`: `AuditLog` append-only immutable ledger tracking entity mutations, old/new value JSON snapshots, user IP address, and client user-agent.
+- **Back-Populating Model Relationships**:
+  - Updated `User` (`src/db/models/user.py`) to expose back-populating collections to categories, transactions, budgets, goals, loans, recurring rules, holdings, investment transactions, and audit logs.
+  - Updated `FinancialAccount` (`src/db/models/account.py`) to expose relationships to transaction entries, loans, recurring rules, holdings, and investment transactions.
+  - Re-exported all models and enums cleanly in `src/db/models/__init__.py`.
+- **Alembic Database Migration (`472e31906438`)**:
+  - Generated and validated migration `alembic/versions/472e31906438_create_phase_2_relational_models.py` with explicit constraint names and SQLite batch mode support (`render_as_batch=True`).
+  - Applied migration cleanly to `data/finance.db` via `alembic upgrade head`.
+  - Verified existing database records (specifically `Primary Checking` with `USD` and `1500.00` balance) were preserved without modification.
+  - Tested migration downgrade to `fba246fe5321` and re-upgrade to head on an isolated disposable test database.
+- **Development Database Seeder Expansion (`src/db/seed.py`)**:
+  - Added 13 default Indian categories across income and expense flows (Salary, Investments, Housing, Groceries, Utilities, Transport, etc.).
+  - Added sample investment asset (`NIFTYBEES` ETF) and sample savings goal (`Emergency Fund`) seeded idempotently.
+- **Automated Test Suite**:
+  - `tests/unit/test_phase2_models.py`: 10 comprehensive unit tests covering model relationships, check constraints, unique constraints, cascade deletes, account deletion restrictions, and 4-decimal quantity precision.
+  - `tests/integration/test_migrations.py`: 1 integration test verifying Alembic upgrade, reflection of all 15 tables, downgrade to Phase 1, and re-upgrade to head.
+  - Total automated tests increased from 30 to 41 tests (100% pass rate).
+  - Code coverage: 89% across `src/`.
 
 ---
 

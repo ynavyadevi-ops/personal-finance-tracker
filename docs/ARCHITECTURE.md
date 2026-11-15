@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/ARCHITECTURE.md`  
 > **STATUS**: APPROVED BASELINE  
 > **STACK**: Python 3.12 + SQL (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 0 — Foundation and Documentation
+> **CURRENT PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
 
 ---
 
@@ -176,216 +176,139 @@ class GenericResponse(BaseModel, Generic[T]):
 
 ## 5. Database Architecture & SQLAlchemy Layer
 
-### Database Models
+### Entity-Relationship Diagram (ERD)
 
-```python
-import enum
-from decimal import Decimal
-from datetime import datetime, date
-from typing import Optional, List
-from sqlalchemy import String, DateTime, Date, Numeric, Boolean, ForeignKey, Index, Enum
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+```mermaid
+erDiagram
+    users ||--o{ financial_accounts : "owns"
+    users ||--o{ categories : "creates"
+    users ||--o{ transactions : "records"
+    users ||--o{ budgets : "sets"
+    users ||--o{ savings_goals : "tracks"
+    users ||--o{ loan_debts : "owes"
+    users ||--o{ recurring_rules : "configures"
+    users ||--o{ investment_holdings : "holds"
+    users ||--o{ investment_transactions : "executes"
+    users ||--o{ audit_logs : "generates"
 
-class Base(DeclarativeBase):
-    pass
+    financial_accounts ||--o{ transaction_entries : "ledger entries"
+    financial_accounts ||--o{ loan_debts : "tied loan"
+    financial_accounts ||--o{ recurring_rules : "source account"
+    financial_accounts ||--o{ investment_holdings : "portfolio holdings"
+    financial_accounts ||--o{ investment_transactions : "clearing account"
 
-class AccountType(str, enum.Enum):
-    CHECKING = "CHECKING"
-    SAVINGS = "SAVINGS"
-    CREDIT_CARD = "CREDIT_CARD"
-    CASH = "CASH"
-    INVESTMENT = "INVESTMENT"
-    LOAN = "LOAN"
+    categories ||--o{ categories : "subcategories (self-ref)"
+    categories ||--o{ transaction_entries : "categorizes"
+    categories ||--o{ budgets : "budget allocation"
 
-class TransactionType(str, enum.Enum):
-    INCOME = "INCOME"
-    EXPENSE = "EXPENSE"
-    TRANSFER = "TRANSFER"
+    transactions ||--o{ transaction_entries : "balanced double-entries"
+    recurring_rules ||--o{ transactions : "spawns"
 
-class User(Base):
-    __tablename__ = "users"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    full_name: Mapped[Optional[str]] = mapped_column(String(100))
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    loan_debts ||--o{ loan_payment_schedules : "amortization instalments"
+    transactions ||--o| loan_payment_schedules : "settlement transaction"
 
-    accounts: Mapped[List["Account"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    categories: Mapped[List["Category"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    transactions: Mapped[List["Transaction"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    budgets: Mapped[List["Budget"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    holdings: Mapped[List["InvestmentHolding"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    goals: Mapped[List["SavingsGoal"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    loans: Mapped[List["LoanDebtSchedule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-    recurring_rules: Mapped[List["RecurringRule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
-
-class Account(Base):
-    __tablename__ = "financial_accounts"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    account_type: Mapped[AccountType] = mapped_column(Enum(AccountType), nullable=False)
-    opening_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0.00"), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="accounts")
-    transactions: Mapped[List["Transaction"]] = relationship(back_populates="account")
-    holdings: Mapped[List["InvestmentHolding"]] = relationship(back_populates="account")
-    loan_schedule: Mapped[Optional["LoanDebtSchedule"]] = relationship(back_populates="account", uselist=False)
-    recurring_rules: Mapped[List["RecurringRule"]] = relationship(back_populates="account")
-
-class Category(Base):
-    __tablename__ = "categories"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[Optional[str]] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    color: Mapped[str] = mapped_column(String(7), default="#64748b")
-    icon: Mapped[Optional[str]] = mapped_column(String(50))
-    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
-
-    user: Mapped[Optional["User"]] = relationship(back_populates="categories")
-    transactions: Mapped[List["Transaction"]] = relationship(back_populates="category")
-    budgets: Mapped[List["Budget"]] = relationship(back_populates="category")
-
-class Transaction(Base):
-    __tablename__ = "transactions"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
-    category_id: Mapped[Optional[str]] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"), index=True)
-    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    transaction_type: Mapped[TransactionType] = mapped_column(Enum(TransactionType), nullable=False)
-    date: Mapped[date] = mapped_column(Date, index=True, nullable=False)
-    payee: Mapped[Optional[str]] = mapped_column(String(150))
-    notes: Mapped[Optional[str]] = mapped_column(String(500))
-    tags: Mapped[Optional[str]] = mapped_column(String(200)) # Comma-separated tags
-    
-    # Linked transfer tracking
-    linked_transaction_id: Mapped[Optional[str]] = mapped_column(String(36), unique=True)
-    
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="transactions")
-    account: Mapped["Account"] = relationship(back_populates="transactions")
-    category: Mapped[Optional["Category"]] = relationship(back_populates="transactions")
-
-    __table_args__ = (
-        Index("ix_transactions_user_date", "user_id", "date"),
-        Index("ix_transactions_account_date", "account_id", "date"),
-    )
-
-class Budget(Base):
-    __tablename__ = "budgets"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    category_id: Mapped[str] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"), index=True, nullable=False)
-    month: Mapped[int] = mapped_column(nullable=False) # 1 - 12
-    year: Mapped[int] = mapped_column(nullable=False)  # e.g., 2026
-    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="budgets")
-    category: Mapped["Category"] = relationship(back_populates="budgets")
-
-    __table_args__ = (
-        Index("ix_budgets_unique_period", "user_id", "category_id", "month", "year", unique=True),
-    )
-
-class InvestmentHolding(Base):
-    __tablename__ = "investment_holdings"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
-    symbol: Mapped[str] = mapped_column(String(20), index=True, nullable=False) # e.g., TATASTEEL, RELIANCE, NIFTYBEES
-    asset_name: Mapped[str] = mapped_column(String(100), nullable=False) # e.g., Tata Steel Ltd
-    asset_type: Mapped[str] = mapped_column(String(50), nullable=False) # EQUITY, MUTUAL_FUND, ETF, BOND, GOLD
-    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False) # 4 decimals for fractional shares/mutual fund units
-    cost_basis_per_unit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    total_cost: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    current_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 2))
-    current_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 2))
-    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="holdings")
-    account: Mapped["Account"] = relationship(back_populates="holdings")
-
-class SavingsGoal(Base):
-    __tablename__ = "savings_goals"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    target_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    current_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0.00"), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
-    target_date: Mapped[Optional[date]] = mapped_column(Date)
-    is_achieved: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="goals")
-
-class LoanDebtSchedule(Base):
-    __tablename__ = "loan_debt_schedules"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
-    lender_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    principal_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    remaining_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    interest_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False) # Annual interest rate (e.g., 8.50%)
-    minimum_monthly_payment: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    start_date: Mapped[date] = mapped_column(Date, nullable=False)
-    due_date: Mapped[Optional[date]] = mapped_column(Date)
-    is_settled: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="loans")
-    account: Mapped["Account"] = relationship(back_populates="loan_schedule")
-
-class RecurringRule(Base):
-    __tablename__ = "recurring_rules"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
-    category_id: Mapped[Optional[str]] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"), index=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
-    frequency: Mapped[str] = mapped_column(String(20), nullable=False) # DAILY, WEEKLY, MONTHLY, YEARLY
-    start_date: Mapped[date] = mapped_column(Date, nullable=False)
-    next_occurrence: Mapped[date] = mapped_column(Date, index=True, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-    user: Mapped["User"] = relationship(back_populates="recurring_rules")
-    account: Mapped["Account"] = relationship(back_populates="recurring_rules")
-    category: Mapped[Optional["Category"]] = relationship(back_populates="recurring_rules")
-
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    action: Mapped[str] = mapped_column(String(50), nullable=False) # CREATE, UPDATE, DELETE, TRANSFER
-    entity: Mapped[str] = mapped_column(String(50), nullable=False) # Account, Transaction, Budget
-    entity_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    details: Mapped[str] = mapped_column(String(1000), nullable=False) # JSON payload string
-    ip_address: Mapped[Optional[str]] = mapped_column(String(45))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    investment_assets ||--o{ investment_holdings : "positions"
+    investment_assets ||--o{ investment_transactions : "asset trades"
+    transactions ||--o| investment_transactions : "cash leg"
 ```
+
+### Database Tables & Schema Specifications
+
+The relational schema comprises 12 domain tables plus Alembic migration version tracking:
+
+1. **`users`**
+   - Core tenant record.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Fields: `email` (`VARCHAR(255)`, unique, nullable for local dev), `name` (`VARCHAR(100)`).
+   - Cascades: Deleting a user cascades to all associated accounts, categories, transactions, budgets, goals, loans, rules, holdings, and audit logs.
+
+2. **`financial_accounts`**
+   - Depository, credit, investment, or loan accounts.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`).
+   - Fields: `name` (`VARCHAR(100)`), `account_type` (`ENUM`: `CHECKING`, `SAVINGS`, `CREDIT_CARD`, `CASH`, `INVESTMENT`, `LOAN`), `institution_name` (`VARCHAR(100)`), `currency` (`VARCHAR(3)`, default `"INR"`), `opening_balance` (`NUMERIC(18, 2)`), `is_active` (`BOOLEAN`).
+   - Protection: Deletion is `RESTRICT`ed if referenced by `transaction_entries`, `loan_debts`, `investment_holdings`, or `investment_transactions`.
+
+3. **`categories`**
+   - Hierarchical transaction classification with self-referential nesting.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`, nullable for system defaults), `parent_id` -> `categories.id` (`ON DELETE CASCADE`).
+   - Fields: `name` (`VARCHAR(100)`), `category_type` (`ENUM`: `INCOME`, `EXPENSE`), `color` (`VARCHAR(7)`), `icon` (`VARCHAR(50)`), `is_default` (`BOOLEAN`).
+   - Constraints: `uq_categories_user_name_parent` (`UNIQUE(user_id, name, parent_id)`).
+
+4. **`transactions`**
+   - Business transaction events (income, expense, or inter-account transfer).
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`), `recurring_rule_id` -> `recurring_rules.id` (`ON DELETE SET NULL`).
+   - Fields: `transaction_date` (`DATE`), `transaction_type` (`ENUM`: `INCOME`, `EXPENSE`, `TRANSFER`), `description` (`VARCHAR(255)`), `amount` (`NUMERIC(18, 2)`), `currency` (`VARCHAR(3)`), `notes` (`VARCHAR(500)`), `tags` (`VARCHAR(255)`).
+   - Constraints: `chk_transactions_positive_amount` (`amount > 0`).
+
+5. **`transaction_entries`**
+   - Balanced double-entry ledger line items associated with financial accounts.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `transaction_id` -> `transactions.id` (`ON DELETE CASCADE`), `account_id` -> `financial_accounts.id` (`ON DELETE RESTRICT`), `category_id` -> `categories.id` (`ON DELETE SET NULL`).
+   - Fields: `entry_type` (`ENUM`: `DEBIT`, `CREDIT`), `amount` (`NUMERIC(18, 2)`), `currency` (`VARCHAR(3)`), `notes` (`VARCHAR(255)`).
+   - Constraints: `chk_transaction_entries_positive_amount` (`amount > 0`).
+
+6. **`budgets`**
+   - Monthly category spending allocations.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`), `category_id` -> `categories.id` (`ON DELETE CASCADE`).
+   - Fields: `month` (`INTEGER`), `year` (`INTEGER`), `amount` (`NUMERIC(18, 2)`), `rollover_enabled` (`BOOLEAN`), `notes` (`VARCHAR(255)`).
+   - Constraints: `uq_budgets_user_cat_period` (`UNIQUE(user_id, category_id, month, year)`), `chk_budgets_valid_month` (`month >= 1 AND month <= 12`), `chk_budgets_positive_amount` (`amount > 0`).
+
+7. **`savings_goals`**
+   - Target savings milestones with progress tracking.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`).
+   - Fields: `name` (`VARCHAR(100)`), `target_amount` (`NUMERIC(18, 2)`), `current_amount` (`NUMERIC(18, 2)`), `currency` (`VARCHAR(3)`), `target_date` (`DATE`), `is_achieved` (`BOOLEAN`), `notes` (`VARCHAR(500)`).
+   - Constraints: `chk_savings_goals_positive_target` (`target_amount > 0`), `chk_savings_goals_non_negative_current` (`current_amount >= 0`).
+
+8. **`loan_debts`**
+   - Liability obligations, interest terms, and repayment tracking.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`), `account_id` -> `financial_accounts.id` (`ON DELETE RESTRICT`).
+   - Fields: `lender_name` (`VARCHAR(100)`), `principal_amount` (`NUMERIC(18, 2)`), `remaining_balance` (`NUMERIC(18, 2)`), `interest_rate` (`NUMERIC(5, 2)`), `interest_type` (`ENUM`: `FIXED`, `FLOATING`), `term_months` (`INTEGER`), `minimum_monthly_payment` (`NUMERIC(18, 2)`), `start_date` (`DATE`), `due_date` (`DATE`), `is_settled` (`BOOLEAN`), `notes` (`VARCHAR(500)`).
+   - Constraints: `chk_loan_debts_positive_principal` (`principal_amount > 0`), `chk_loan_debts_non_negative_remaining` (`remaining_balance >= 0`), `chk_loan_debts_non_negative_interest` (`interest_rate >= 0`), `chk_loan_debts_positive_term` (`term_months > 0`).
+
+9. **`loan_payment_schedules`**
+   - Detailed amortization instalment schedule entries.
+   - Primary Key: `id` (`VARCHAR(36)` UUID).
+   - Foreign Keys: `loan_id` -> `loan_debts.id` (`ON DELETE CASCADE`), `transaction_id` -> `transactions.id` (`ON DELETE SET NULL`).
+   - Fields: `payment_number` (`INTEGER`), `due_date` (`DATE`), `principal_component` (`NUMERIC(18, 2)`), `interest_component` (`NUMERIC(18, 2)`), `total_payment` (`NUMERIC(18, 2)`), `remaining_balance` (`NUMERIC(18, 2)`), `is_paid` (`BOOLEAN`), `paid_date` (`DATE`).
+   - Constraints: `uq_loan_schedules_loan_number` (`UNIQUE(loan_id, payment_number)`), `chk_loan_schedules_positive_number` (`payment_number > 0`), `chk_loan_schedules_positive_total` (`total_payment > 0`).
+
+10. **`recurring_rules`**
+    - Templates and schedules for recurring bills, income, and automated transfers.
+    - Primary Key: `id` (`VARCHAR(36)` UUID).
+    - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`), `account_id` -> `financial_accounts.id` (`ON DELETE RESTRICT`), `category_id` -> `categories.id` (`ON DELETE SET NULL`), `destination_account_id` -> `financial_accounts.id` (`ON DELETE SET NULL`).
+    - Fields: `name` (`VARCHAR(100)`), `amount` (`NUMERIC(18, 2)`), `currency` (`VARCHAR(3)`), `transaction_type` (`ENUM`: `INCOME`, `EXPENSE`, `TRANSFER`), `frequency` (`ENUM`: `DAILY`, `WEEKLY`, `BIWEEKLY`, `MONTHLY`, `QUARTERLY`, `YEARLY`), `interval` (`INTEGER`), `start_date` (`DATE`), `end_date` (`DATE`), `next_occurrence` (`DATE`), `is_active` (`BOOLEAN`), `notes` (`VARCHAR(500)`).
+    - Constraints: `chk_recurring_rules_positive_amount` (`amount > 0`), `chk_recurring_rules_positive_interval` (`"interval" > 0`).
+
+11. **`investment_assets`**
+    - Master catalog of tradeable securities and assets.
+    - Primary Key: `id` (`VARCHAR(36)` UUID).
+    - Fields: `symbol` (`VARCHAR(20)`, unique), `name` (`VARCHAR(150)`), `asset_type` (`ENUM`: `EQUITY`, `MUTUAL_FUND`, `ETF`, `BOND`, `GOLD`, `CRYPTO`, `OTHER`), `isin` (`VARCHAR(12)`, unique), `exchange` (`VARCHAR(20)`), `currency` (`VARCHAR(3)`), `current_price` (`NUMERIC(18, 2)`), `last_price_update` (`DATETIME`), `is_active` (`BOOLEAN`).
+
+12. **`investment_holdings`**
+    - User holdings in securities within designated investment accounts.
+    - Primary Key: `id` (`VARCHAR(36)` UUID).
+    - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`), `account_id` -> `financial_accounts.id` (`ON DELETE RESTRICT`), `asset_id` -> `investment_assets.id` (`ON DELETE RESTRICT`).
+    - Fields: `quantity` (`NUMERIC(18, 4)` for fractional shares and mutual fund units), `cost_basis_per_unit` (`NUMERIC(18, 2)`), `total_cost` (`NUMERIC(18, 2)`), `current_value` (`NUMERIC(18, 2)`), `currency` (`VARCHAR(3)`).
+    - Constraints: `uq_holdings_user_acc_asset` (`UNIQUE(user_id, account_id, asset_id)`), `chk_holdings_non_negative_qty` (`quantity >= 0`), `chk_holdings_non_negative_cost_basis` (`cost_basis_per_unit >= 0`), `chk_holdings_non_negative_total_cost` (`total_cost >= 0`).
+
+13. **`investment_transactions`**
+    - Ledger of security purchase, sale, dividend, split, and interest operations.
+    - Primary Key: `id` (`VARCHAR(36)` UUID).
+    - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`), `account_id` -> `financial_accounts.id` (`ON DELETE RESTRICT`), `asset_id` -> `investment_assets.id` (`ON DELETE RESTRICT`), `related_transaction_id` -> `transactions.id` (`ON DELETE SET NULL`).
+    - Fields: `transaction_type` (`ENUM`: `BUY`, `SELL`, `DIVIDEND`, `SPLIT`, `INTEREST`), `transaction_date` (`DATE`), `quantity` (`NUMERIC(18, 4)`), `price_per_unit` (`NUMERIC(18, 2)`), `total_amount` (`NUMERIC(18, 2)`), `fees` (`NUMERIC(18, 2)`), `currency` (`VARCHAR(3)`), `notes` (`VARCHAR(500)`).
+    - Constraints: `chk_inv_tx_non_negative_qty` (`quantity >= 0`), `chk_inv_tx_non_negative_price` (`price_per_unit >= 0`), `chk_inv_tx_non_negative_amount` (`total_amount >= 0`), `chk_inv_tx_non_negative_fees` (`fees >= 0`).
+
+14. **`audit_logs`**
+    - Append-only immutable log of state mutations.
+    - Primary Key: `id` (`VARCHAR(36)` UUID).
+    - Foreign Keys: `user_id` -> `users.id` (`ON DELETE CASCADE`).
+    - Fields: `action` (`VARCHAR(50)`), `entity_name` (`VARCHAR(50)`), `entity_id` (`VARCHAR(36)`), `old_values` (`VARCHAR(2000)` JSON string), `new_values` (`VARCHAR(2000)` JSON string), `ip_address` (`VARCHAR(45)`), `user_agent` (`VARCHAR(255)`), `created_at` (`DATETIME`).
 
 ---
 
@@ -399,20 +322,21 @@ To prevent precision loss from IEEE 754 floating-point math:
    def round_currency(value: Decimal) -> Decimal:
        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_EVEN)
    ```
-2. **Database Mapping**: In SQLAlchemy, all monetary columns are defined as `Numeric(18, 2)`. This maps to `NUMERIC(18, 2)` in PostgreSQL and `DECIMAL(18, 2)` in SQLite, completely avoiding floating-point storage.
-3. **Pydantic Validation**: All transaction and account schemas validate monetary inputs using `pydantic.condecimal(decimal_places=2, max_digits=18)` or custom validators that reject non-decimal floats.
+2. **Database Mapping**: In SQLAlchemy, all currency amounts are stored as `Numeric(18, 2)`. Investment quantities use `Numeric(18, 4)` to support fractional shares, mutual fund units, and precious metal gram weights.
+3. **Pydantic Validation**: All transaction and account schemas validate monetary inputs using strict Pydantic Decimal validators that reject unrounded non-decimal floats.
 
 ---
 
-## 7. Database Transactions & Atomic Transfers
+## 7. Database Transactions & Double-Entry Accounting
 
-- **Transaction Scope**: Database writes are wrapped in atomic transaction contexts.
-- **Atomic Transfer Implementation**:
-  When a user transfers amount ₹X from Account A to Account B, the `TransactionService` creates two paired records inside a single `session.begin()` block:
-  1. An `EXPENSE` (or `TRANSFER_OUT`) on Account A of amount ₹X.
-  2. An `INCOME` (or `TRANSFER_IN`) on Account B of amount ₹X.
-  3. Both records reference each other via `linked_transaction_id`.
-  If an exception occurs during any step, SQLAlchemy rolls back the entire session, ensuring no funds are created or destroyed.
+- **Transaction Scope**: Database writes are wrapped in atomic transaction contexts (`session.begin()`).
+- **Double-Entry Ledger Architecture**:
+  Every financial business event (`Transaction`) is backed by balanced `TransactionEntry` ledger lines:
+  - **Expense**: 1 `CREDIT` entry reducing account balance; 1 expense categorization line.
+  - **Income**: 1 `DEBIT` entry increasing account balance; 1 income categorization line.
+  - **Transfer**: 1 `CREDIT` entry reducing source account; 1 `DEBIT` entry increasing destination account.
+  - **Ledger Invariant**: Total debits equal total credits for every balanced transaction event.
+  - If an exception occurs during ledger creation or balance adjustment, the atomic database transaction automatically rolls back.
 
 ---
 
