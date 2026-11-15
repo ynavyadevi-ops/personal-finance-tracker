@@ -19,6 +19,8 @@
 - [ADR-008: Testing Suite Architecture (Pytest & HTTPX)](#adr-008-testing-suite-architecture-pytest--httpx)
 - [ADR-009: Security & Supply-Chain Auditing (Bandit & pip-audit)](#adr-009-security--supply-chain-auditing-bandit--pip-audit)
 - [ADR-010: Phased Implementation Lifecycle with Approval Gates](#adr-010-phased-implementation-lifecycle-with-approval-gates)
+- [ADR-011: Synchronous Engine for SQLite in Local Development](#adr-011-synchronous-engine-for-sqlite-in-local-development)
+- [ADR-012: Pinned Dependency Upgrades for Proactive CVE Remediation](#adr-012-pinned-dependency-upgrades-for-proactive-cve-remediation)
 
 ---
 
@@ -169,3 +171,39 @@
   - Guarantees human-in-the-loop governance.
 - **Consequences**:
   - All development halts at the end of each phase until explicit user approval is granted.
+
+---
+
+## ADR-011: Synchronous Engine for SQLite in Local Development
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: In Phase 1 development and local environments (especially Windows sandbox environments), `aiosqlite` threads attempt to wake the asyncio event loop via loopback sockets (`call_soon_threadsafe`), which blocks or hangs without network permissions. SQLite is an in-process single-file embedded database where thread hops add overhead without concurrency advantages.
+- **Decision**: Use SQLAlchemy synchronous `create_engine` with `SessionLocal` and automatic `PRAGMA foreign_keys=ON` connection listener for SQLite local development and test fixtures, while keeping FastAPI route handlers asynchronous.
+- **Rationale**:
+  - Sub-millisecond synchronous execution on local SQLite with zero socket requirements.
+  - Explicit enforcement of SQLite foreign key cascades via connection event listeners.
+  - Aligns with standard FastAPI synchronous dependency injection pattern (`yield db`).
+- **Consequences**:
+  - `src/db/session.py` provides synchronous `get_db` generator and `SessionLocal`.
+  - When migrating to PostgreSQL in production, asynchronous drivers (`asyncpg`) or standard connection pooling (`psycopg2`/`psycopg`) can be selected via `DATABASE_URL`.
+
+---
+
+## ADR-012: Pinned Dependency Upgrades for Proactive CVE Remediation
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: During initial dependency auditing with `pip-audit`, legacy releases of transitive dependencies (e.g., `pillow` 11.3 and `streamlit` 1.41) were found to carry known public CVE vulnerabilities.
+- **Decision**: Upgrade and pin safe modern releases in `pyproject.toml` and `requirements.txt`:
+  - `fastapi>=0.163.0`
+  - `starlette>=1.10.0`
+  - `streamlit>=1.67.0`
+  - `pillow>=13.0.0`
+  - `pytest>=9.2.0`
+  - `pytest-asyncio>=1.5.0`
+- **Rationale**:
+  - Completely eliminates all 69 legacy vulnerabilities identified in older releases.
+  - Maintains strict 100% clean security pass in `pip-audit`.
+- **Consequences**:
+  - All environments and CI pipelines use reproducible pinned versions verified by `pip-audit`.

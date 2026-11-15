@@ -5,29 +5,30 @@ description = "A production-oriented personal finance tracker built with Python,
 readme = "README.md"
 requires-python = ">=3.11, <3.13"
 dependencies = [
-    "fastapi>=0.115.0,<0.116.0",
-    "uvicorn[standard]>=0.34.0,<0.35.0",
-    "pydantic>=2.10.0,<2.11.0",
+    "fastapi>=0.163.0,<0.164.0",
+    "uvicorn[standard]>=0.54.0,<0.55.0",
+    "pydantic>=2.14.0,<2.15.0",
     "pydantic-settings>=2.7.0,<2.8.0",
-    "sqlalchemy>=2.0.38,<2.1.0",
+    "sqlalchemy>=2.0.57,<2.1.0",
     "alembic>=1.14.0,<1.15.0",
     "aiosqlite>=0.20.0,<0.21.0",
-    "streamlit>=1.40.0,<1.42.0",
+    "streamlit>=1.67.0,<1.68.0",
     "plotly>=5.24.0,<6.0.0",
-    "pandas>=2.2.0,<2.3.0",
+    "pandas>=3.1.0,<3.2.0",
+    "pillow>=13.0.0,<14.0.0",
     "httpx>=0.28.0,<0.29.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.3.0,<8.4.0",
-    "pytest-asyncio>=0.24.0,<0.25.0",
+    "pytest>=9.2.0,<9.3.0",
+    "pytest-asyncio>=1.5.0,<1.6.0",
     "pytest-cov>=6.0.0,<6.1.0",
     "ruff>=0.9.0,<0.10.0",
     "mypy>=1.14.0,<1.15.0",
     "bandit>=1.8.0,<1.9.0",
     "pip-audit>=2.8.0,<2.9.0",
-    "types-requests>=2.32.0",
+    "types-requests>=2.33.0",
 ]
 
 [build-system]
@@ -37,6 +38,9 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = [
+    "alembic/versions/*",
+]
 
 [tool.ruff.lint]
 select = [
@@ -50,10 +54,23 @@ select = [
 ]
 ignore = [
     "E501", # line too long (handled by formatter)
+    "B008", # do not perform function calls in argument defaults (FastAPI Depends pattern)
 ]
 
 [tool.mypy]
 python_version = "3.12"
+files = [
+    "src/api",
+    "src/core",
+    "src/db",
+    "src/schemas",
+    "src/repositories",
+    "src/services",
+    "src/frontend/api_client.py",
+    "src/frontend/components",
+]
+mypy_path = "."
+explicit_package_bases = true
 strict = true
 warn_unused_configs = true
 warn_redundant_casts = true
@@ -70,11 +87,14 @@ module = [
     "plotly.*",
     "pandas.*",
     "aiosqlite.*",
+    "altair.*",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

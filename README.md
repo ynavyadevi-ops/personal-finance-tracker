@@ -21,7 +21,7 @@ A production-oriented, secure, and modern full-stack financial management web ap
   - Dependency vulnerability auditing via [pip-audit](https://github.com/pypa/pip-audit).
   - Automated testing via [Pytest](https://docs.pytest.org/) and asynchronous HTTP testing via [HTTPX](https://www.python-httpx.org/).
   - Exact financial arithmetic with Python's native `decimal.Decimal` and database `Numeric(18, 2)` (zero floating-point inaccuracies).
-- **Current Phase**: **Phase 0 — Project Foundation and Documentation (Completed / Awaiting User Approval)**.
+- **Current Phase**: **Phase 1 — Environment and Application Foundation (Completed / Awaiting Phase 2 Approval)**.
 
 ---
 
@@ -72,9 +72,9 @@ The repository governance and technical designs are thoroughly documented across
 ## 4. Nine-Phase Development Lifecycle
 
 Progress is strictly gated across nine sequential stages:
-1. **Phase 0: Project Foundation and Documentation** *(Current Phase — Complete / Awaiting Approval)*
-2. **Phase 1: Environment Setup, Python Tooling & Scaffolding**
-3. **Phase 2: Database Modeling, SQLAlchemy & Alembic Migrations**
+1. **Phase 0: Project Foundation and Documentation** *(Completed)*
+2. **Phase 1: Environment Setup, Python Tooling & Scaffolding** *(Completed)*
+3. **Phase 2: Database Modeling, SQLAlchemy & Alembic Migrations** *(Next Phase — Awaiting Approval)*
 4. **Phase 3: Core Domain Services, Pydantic Schemas & Financial Arithmetic**
 5. **Phase 4: FastAPI REST API, Endpoints & Authentication**
 6. **Phase 5: Streamlit UI Framework, Layout & Reusable Widgets**
@@ -85,26 +85,51 @@ Progress is strictly gated across nine sequential stages:
 
 ---
 
-## 5. Getting Started (For Phase 1+)
+## 5. Getting Started & Running the Application
 
-*Note: Application dependencies and code will be initialized in Phase 1 following explicit user approval.*
+### Prerequisites
+- Python 3.12+ (tested on CPython 3.12.13)
+- `uv` or standard Python `venv`
 
+### Setup & Launch Instructions
 ```bash
-# 1. Create a Python virtual environment (using uv or standard python)
-uv venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# 1. Activate the virtual environment
+# On Windows:
+.venv\Scripts\activate
+# On Unix/macOS:
+source .venv/bin/activate
 
-# 2. Install dependencies (Phase 1)
-uv pip install -r requirements.txt
-
-# 3. Apply database migrations (Phase 2)
+# 2. Verify or apply database migrations
 alembic upgrade head
 
-# 4. Start the FastAPI backend service (Phase 4+)
-uvicorn src.api.main:app --reload --port 8000
+# 3. Seed development default user and account (optional)
+python -m src.db.seed
 
-# 5. Launch the Streamlit web dashboard (Phase 5+)
+# 4. Start the FastAPI backend service (Terminal 1)
+uvicorn src.api.main:app --reload --port 8000
+# OpenAPI Docs: http://127.0.0.1:8000/docs
+# Health Check: http://127.0.0.1:8000/health
+
+# 5. Launch the Streamlit web dashboard (Terminal 2)
 streamlit run src/frontend/app.py --server.port 8501
+# Web Dashboard: http://127.0.0.1:8501
+```
+
+### Verification & Testing
+```bash
+# Run complete test suite (21 tests)
+pytest
+
+# Code formatting & linting
+ruff check .
+ruff format --check .
+
+# Static type check (strict mode)
+mypy
+
+# Security & dependency audits
+bandit -r src/
+pip-audit
 ```
 
 ---
