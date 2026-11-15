@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED — AWAITING PHASE 4 APPROVAL)
+> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED — AWAITING PHASE 5 APPROVAL)
 
 ---
 
@@ -16,19 +16,26 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 1 (Environment Setup and Application Foundation)**: **COMPLETE & REMEDIATED**.
 - **Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)**: **COMPLETE & VERIFIED**.
 - **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
-  - 7 specialized financial domain services implemented in `src/services/` (`LedgerService`, `TransactionService`, `BudgetService`, `SavingsGoalService`, `LoanService`, `RecurringService`, `InvestmentService`).
-  - 7 dedicated repositories implemented in `src/repositories/` (`TransactionRepository`, `CategoryRepository`, `BudgetRepository`, `SavingsGoalRepository`, `LoanRepository`, `RecurringRepository`, `InvestmentRepository`).
-  - Pydantic v2 validation DTOs implemented in `src/schemas/`.
-  - Domain exceptions implemented in `src/core/exceptions.py`.
-  - Double-entry ledger invariants enforced ($\sum \text{Debits} == \sum \text{Credits}$).
-  - Multi-tenant security verified (strict cross-user account/category isolation).
-  - Currency compatibility strictly enforced with `CurrencyMismatchError` (HTTP 422).
-  - Idempotency caching prevents duplicate financial mutations.
-  - Compensating transaction reversals preserve immutable audit trails.
-  - 87 automated tests (74 unit tests, 13 integration tests) passing with 100% pass rate.
-  - Ruff (0 errors, 75 files formatted), Mypy strict (0 errors in 56 files), Bandit SAST (0 issues in 4,969 lines), pip-audit (0 CVE vulnerabilities).
-  - Existing database records preserved intact: `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 3 Approval Gate awaiting explicit user authorization to begin Phase 4 execution.**
+- **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETE & VERIFIED**.
+  - Authentication foundation (`src/core/security.py`, `src/api/routers/auth.py`): Argon2id password hashing via `pwdlib[argon2]`, signed short-lived JWT access tokens via `pyjwt` (`HS256`, 60-min expiration), safe initial legacy password enrollment (`/api/v1/auth/enroll`), OAuth2 login (`/api/v1/auth/token`), and user profile (`/api/v1/auth/me`).
+  - Migration `6c8ca07763d0`: Added nullable `hashed_password` to `users` table via `batch_alter_table`.
+  - Financial REST API Routers (`src/api/routers/`):
+    - `/api/v1/accounts`: Protected account management with active filtering.
+    - `/api/v1/transactions`: Income/expense posting, atomic transfers (`/transfer`), compensating reversals (`/{id}/reverse`), pagination, filters, and mathematical balance reconciliation (`/reconcile/{account_id}`).
+    - `/api/v1/budgets`: Budget allocations (`POST /`), category utilization (`/utilization`), period overviews (`/period`), threshold classification (NORMAL, WARNING, EXCEEDED), and rollover.
+    - `/api/v1/goals`: Savings milestones, contributions (`/{id}/contribute`), withdrawals (`/{id}/withdraw`), and progress tracking (`/{id}/progress`).
+    - `/api/v1/loans`: Debt obligations, auto-generated fixed-rate amortization schedules, payment instalment recording (`/{id}/payment`).
+    - `/api/v1/investments`: Securities purchasing (`/buy`) with weighted-average cost basis, sales (`/sell`) with unit sufficiency checks and realized P&L, dividend logs (`/dividend`), and holdings queries (`/holdings`).
+    - `/api/v1/recurring`: Recurrence rule definitions, due rule queries (`/due`), execution spawning ledger transactions with duplicate occurrence prevention (`/{id}/execute`), pause/resume (`/pause`, `/resume`).
+  - Data Portability Pipeline (`src/services/portability_service.py`, `src/api/routers/data_portability.py`):
+    - Statement Import Wizard (`POST /api/v1/data/import/preview`, `POST /api/v1/data/import/commit`): Pandas/openpyxl CSV and XLSX parsing, configurable column mappings, validation limits (5MB, 1000 rows), duplicate detection against existing ledger records, and atomic batch commit.
+    - Data Export (`GET /api/v1/data/export/csv`, `GET /api/v1/data/export/xlsx`): Filtered transaction exports with formula injection defense (`=, +, -, @, \t, \r` escaping).
+    - Backup & Dry-Run Validation (`GET /api/v1/data/backup`, `POST /api/v1/data/backup/validate`): Full user-scoped JSON backup snapshot across 11 tables with exact Decimal string formatting. Destructive restore is strictly non-executable per security directives; only non-destructive export and dry-run validation are exposed.
+  - 119 automated tests (74 unit tests, 45 integration tests) passing with 100% pass rate.
+  - 89% overall test coverage across `src/`.
+  - Ruff (0 errors, all files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 6,770 lines), pip-audit (0 CVE vulnerabilities).
+  - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
+- **Execution is halted at the Phase 4 Approval Gate awaiting explicit user authorization to begin Phase 5 execution.**
 
 ---
 
@@ -75,15 +82,15 @@ All models are implemented in `src/db/models/` using SQLAlchemy 2.0 `Mapped` and
 
 | Check | Tool / Framework | Scope | Result | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Unit Tests** | Pytest | 31 unit test functions across models, services, core | 31 passed in 0.3s | **PASS** |
-| **Integration Tests** | Pytest + HTTPX + Alembic | 10 integration test functions (API & Migrations) | 10 passed in 2.0s | **PASS** |
-| **Total Automated Tests** | Pytest | Complete test suite (41 tests) | 41 passed, 0 failed | **PASS** |
-| **Test Coverage** | pytest-cov | Entire `src/` application code | 89% coverage (892 stmts) | **PASS** |
-| **Code Formatting** | Ruff | 48 project Python files | 48 files formatted | **PASS** |
+| **Unit Tests** | Pytest | 74 unit test functions across models, services, core | 74 passed in 0.5s | **PASS** |
+| **Integration Tests** | Pytest + HTTPX + Alembic | 45 integration test functions (API, Auth, Portability, Migrations) | 45 passed in 3.1s | **PASS** |
+| **Total Automated Tests** | Pytest | Complete test suite (119 tests) | 119 passed, 0 failed | **PASS** |
+| **Test Coverage** | pytest-cov | Entire `src/` application code | 89% coverage (2,831 stmts) | **PASS** |
+| **Code Formatting** | Ruff | 86 project Python files | 86 files formatted | **PASS** |
 | **Code Linting** | Ruff | Complete repository | 0 lint errors | **PASS** |
-| **Type Checking** | Mypy (strict) | 36 source files in `src/` | 0 type errors | **PASS** |
-| **SAST Security Scan** | Bandit | 2,628 lines of application code (`src/`) | 0 issues identified | **PASS** |
-| **Dependency CVE Scan** | pip-audit | 96 installed dependencies against PyPI DB | 0 vulnerabilities found | **PASS** |
+| **Type Checking** | Mypy (strict) | 67 source files in `src/` | 0 type errors | **PASS** |
+| **SAST Security Scan** | Bandit | 6,770 lines of application code (`src/`) | 0 issues identified | **PASS** |
+| **Dependency CVE Scan** | pip-audit | 100 installed dependencies against PyPI DB | 0 vulnerabilities found | **PASS** |
 | **FastAPI Backend Probe** | Uvicorn + HTTPX | Startup and `/health` probe on port 8005 | HTTP 200 OK (DB Connected) | **PASS** |
 | **Streamlit UI Probe** | Streamlit + HTTPX | Headless startup and `/_stcore/health` probe | HTTP 200 OK | **PASS** |
 

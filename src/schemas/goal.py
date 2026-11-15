@@ -45,3 +45,16 @@ class SavingsGoalProgress(BaseModel):
     progress_percentage: Decimal
     is_achieved: bool
     currency: str
+
+
+class GoalContributionRequest(BaseModel):
+    """Schema for adding funds to a savings goal."""
+
+    amount: Annotated[Decimal, Field(gt=Decimal("0.00"), decimal_places=2)]
+    notes: str | None = None
+
+
+class GoalWithdrawalRequest(BaseModel):
+    """Schema for withdrawing funds from a savings goal."""
+
+    amount: Annotated[Decimal, Field(gt=Decimal("0.00"), decimal_places=2)]

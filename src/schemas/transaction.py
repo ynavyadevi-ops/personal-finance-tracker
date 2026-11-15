@@ -101,3 +101,9 @@ class AccountReconciliation(BaseModel):
     expected_balance: Decimal | None = None
     discrepancy: Decimal = Decimal("0.00")
     is_reconciled: bool = True
+
+
+class TransactionReversalRequest(BaseModel):
+    """Schema for requesting a compensating reversal of a transaction."""
+
+    reason: str = Field(default="User requested reversal", min_length=1, max_length=255)

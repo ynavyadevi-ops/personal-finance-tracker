@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from src.api.dependencies import get_db
 from src.api.main import app
+from src.core.security import create_access_token
 from src.db.base import Base
 from src.db.models import AccountType, FinancialAccount, User
 
@@ -79,14 +80,28 @@ def db_session() -> Generator[Session, None, None]:
 
 
 @pytest.fixture
-def client(db_session: Session) -> Generator[TestClient, None, None]:
-    """Yield a FastAPI TestClient with overridden get_db dependency."""
+def unauthenticated_client(db_session: Session) -> Generator[TestClient, None, None]:
+    """Yield a FastAPI TestClient with overridden get_db dependency but no auth headers."""
 
     def override_get_db() -> Generator[Session, None, None]:
         yield db_session
 
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(db_session: Session) -> Generator[TestClient, None, None]:
+    """Yield an authenticated FastAPI TestClient for default-user-id."""
+
+    def override_get_db() -> Generator[Session, None, None]:
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    token = create_access_token("default-user-id")
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as test_client:
         yield test_client
     app.dependency_overrides.clear()
 

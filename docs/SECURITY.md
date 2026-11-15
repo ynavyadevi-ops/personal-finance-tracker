@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SECURITY.md`  
 > **STATUS**: ENFORCED & ACTIVE  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Pydantic v2, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
+> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED)
 
 ---
 
@@ -186,5 +186,35 @@ The Phase 3 domain service layer implements defense-in-depth security policies:
    - `InvestmentService` enforces `InsufficientUnitsError` when an attempt is made to sell more securities than currently held in the account.
    - `SavingsGoalService` prohibits withdrawing more savings than the accumulated balance.
    - `LoanService` prohibits overpayment of loans and verifies positive loan tenures.
+
+---
+
+## 10. Phase 4 Authentication, JWT Security & Data Portability Defenses
+
+1. **Argon2id Password Hashing (`src/core/security.py`)**:
+   - Implements modern Argon2id password hashing via `pwdlib[argon2]`.
+   - Uses cryptographic salting and work factor memory bounds.
+   - Password hashes are strictly excluded from API response schemas (`UserRead`) and backup exports.
+   - Unsalted SHA-256 and fast general-purpose hashes are strictly forbidden.
+
+2. **JWT Authorization & Token Security**:
+   - Tokens issued with short 60-minute UTC expiration (`exp`), issued-at (`iat`), token classification (`type="access"`), and issuer verification (`iss="personal-finance-tracker"`).
+   - Validated using secret key with `HS256`.
+   - All financial endpoints derive identity from `get_current_user` (`current_user.id`), eliminating IDOR/BOLA vulnerabilities. Client-supplied `user_id` is never accepted.
+   - Safe legacy user enrollment (`/api/v1/auth/enroll`) requires explicit password setup before granting login tokens.
+
+3. **Spreadsheet Formula Injection Defense (CSV & Excel)**:
+   - Exported cells starting with dangerous trigger characters (`=, +, -, @, \t, \r`) are automatically escaped by prefixing them with a single quote (`'`), preventing formula execution when opened in Excel or Calc.
+
+4. **Statement File Upload Hardening**:
+   - Ingestion enforces a 5MB maximum file size limit and a 1,000 row cap.
+   - File formats restricted strictly to CSV and XLSX.
+   - In-memory parsing via Pandas with no shell execution or external network calls.
+
+5. **Backup & Restore Safety Policy**:
+   - User-scoped JSON snapshots export all 11 domain models with exact Decimal string representations.
+   - Password hashes and sensitive authentication secrets are strictly scrubbed from exports.
+   - Per security directives, destructive restore (`mode="REPLACE_USER_DATA"`) is strictly disabled and not executable in Phase 4. Only dry-run schema validation is exposed.
+
 
 

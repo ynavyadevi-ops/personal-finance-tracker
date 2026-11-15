@@ -8,7 +8,18 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError as PydanticValidationError
 
-from src.api.routers import accounts_router, health_router
+from src.api.routers import (
+    accounts_router,
+    auth_router,
+    budgets_router,
+    data_portability_router,
+    goals_router,
+    health_router,
+    investments_router,
+    loans_router,
+    recurring_router,
+    transactions_router,
+)
 from src.core.config import settings
 from src.core.exceptions import (
     AppException,
@@ -69,7 +80,15 @@ def create_app() -> FastAPI:
 
     # API v1 endpoints
     app.include_router(health_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
     app.include_router(accounts_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(transactions_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(budgets_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(goals_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(loans_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(investments_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(recurring_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(data_portability_router, prefix=settings.API_V1_PREFIX)
 
     return app
 

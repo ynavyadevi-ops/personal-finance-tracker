@@ -99,3 +99,13 @@ class RealizedGainLossResult(BaseModel):
     total_cost_basis: Decimal
     realized_gain_loss: Decimal
     is_gain: bool
+
+
+class DividendRequest(BaseModel):
+    """Schema for recording a dividend receipt."""
+
+    account_id: str
+    asset_id: str
+    amount: Annotated[Decimal, Field(gt=Decimal("0.00"), decimal_places=2)]
+    transaction_date: date = Field(default_factory=date.today)
+    notes: str | None = None

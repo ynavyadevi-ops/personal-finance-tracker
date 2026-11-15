@@ -39,6 +39,10 @@ class User(Base, TimestampMixin):
         String(100),
         nullable=False,
     )
+    hashed_password: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
 
     # Relationships
     accounts: Mapped[list["FinancialAccount"]] = relationship(

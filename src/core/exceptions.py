@@ -93,6 +93,23 @@ class PermissionDeniedError(AppException):
         )
 
 
+class AuthenticationError(AppException):
+    """Raised when authentication credentials are missing, invalid, or expired."""
+
+    def __init__(
+        self,
+        message: str = "Authentication required",
+        code: str = "UNAUTHORIZED",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            details=details,
+        )
+
+
 class CurrencyMismatchError(ValidationError):
     """Raised when a financial operation involves incompatible currencies."""
 

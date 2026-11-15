@@ -35,6 +35,8 @@ class Settings(BaseSettings):
         default="dev-insecure-secret-key-for-local-development-only-change-in-production",
         description="Application secret key used for session/token cryptographic operations.",
     )
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     # CORS
     CORS_ORIGINS: str = "http://localhost:8501,http://127.0.0.1:8501"

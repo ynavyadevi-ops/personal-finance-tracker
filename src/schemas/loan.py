@@ -73,3 +73,10 @@ class AmortizationScheduleItem(BaseModel):
     interest_component: Decimal
     total_payment: Decimal
     remaining_balance: Decimal
+
+
+class LoanPaymentRequest(BaseModel):
+    """Schema for recording a loan instalment payment."""
+
+    payment_number: Annotated[int, Field(gt=0)]
+    transaction_id: str | None = None

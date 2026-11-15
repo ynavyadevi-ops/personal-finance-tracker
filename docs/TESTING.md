@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/TESTING.md`  
 > **STATUS**: APPROVED BASELINE  
 > **STACK**: Python 3.12 (Pytest, pytest-asyncio, HTTPX, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
+> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED)
 
 ---
 
@@ -190,5 +190,35 @@ A development phase is marked complete ONLY when all gate criteria are met:
 - **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (4,969 lines scanned).
 - **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
 - **Database Record Preservation**: `Primary Checking ('USD', 1500.00)` verified untouched in `data/finance.db`.
+
+---
+
+## 9. Phase 4 Verification & Test Results
+
+### 9.1 Test Execution Metrics
+- **Total Automated Tests**: 119 passed, 0 failed, 0 skipped (100% pass rate).
+- **Execution Time**: ~3.6 seconds.
+- **Overall Code Coverage**: 89% across `src/` (2,831 statements, 313 missed).
+- **Test Distribution (74 Unit, 45 Integration)**:
+  - **Phase 4 Integration Tests (32 new tests)**:
+    - `tests/integration/test_auth_api.py` (6 tests: registration with Argon2id hash, OAuth2 form login with JWT issue, invalid credentials failure, legacy user password enrollment, `/me` profile retrieval without password hash, 401 unauthorized when missing token).
+    - `tests/integration/test_transactions_api.py` (5 tests: income & expense double-entry recording, atomic inter-account transfer, compensating transaction reversal, mathematical balance reconciliation, cross-user isolation).
+    - `tests/integration/test_budgets_api.py` (3 tests: set budget, category utilization with warning threshold, period budget list, cross-user category isolation).
+    - `tests/integration/test_goals_api.py` (3 tests: milestone creation, contributions, withdrawals, progress calculations, cross-user isolation).
+    - `tests/integration/test_loans_api.py` (3 tests: loan creation with fixed-rate amortization schedule, payment instalment processing, loan list, cross-user isolation).
+    - `tests/integration/test_investments_api.py` (4 tests: security buy with weighted-average cost basis, holdings query, security sell with realized capital P&L, insufficient units rejection, dividend earnings log, cross-user isolation).
+    - `tests/integration/test_recurring_api.py` (3 tests: recurring rule creation, due rule execution spawning double-entry transaction with duplicate prevention, pause and resume, cross-user isolation).
+    - `tests/integration/test_data_portability_api.py` (5 tests: CSV statement import preview & duplicate detection, XLSX statement preview, atomic batch commit, CSV export with formula injection defense, XLSX workbook export, JSON backup snapshot export, dry-run schema validation).
+  - **Protected Existing Unit & Integration Tests (87 tests)**:
+    - All 87 Phase 1–3 regression tests continue to pass with zero modifications.
+
+### 9.2 Static Quality & Security Audits
+- **Ruff Linter**: `ruff check .` -> **0 errors** (all checks passed).
+- **Ruff Formatter**: `ruff format --check .` -> **86 files correctly formatted**.
+- **Mypy Type Checking**: `mypy` -> **Success: no issues found in 67 source files** (strict mode).
+- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (6,770 lines scanned).
+- **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
+- **Database Record Preservation**: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` verified intact in `data/finance.db`.
+
 
 

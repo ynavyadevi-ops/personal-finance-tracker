@@ -311,4 +311,45 @@
 - **Consequences**:
   - All financial state mutations must flow through domain services; raw database mutations in routers or scripts are strictly prohibited.
 
+---
+
+## ADR-018: Authentication Architecture, Argon2id Hashing, and JWT Authorization
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 4 requires securing all REST API endpoints with authenticated user identities, preventing cross-user data access, and replacing the hardcoded default user ID with verified JWT bearer credentials. Existing legacy users in development databases must be preserved without silent credential provisioning.
+- **Decision**:
+  1. **Password Hashing with Argon2id**: Use `pwdlib[argon2]` with cryptographic salt to hash and verify passwords. Never store plaintext passwords or use fast general-purpose hashes (e.g. SHA-256).
+  2. **Short-Lived Signed JWT Access Tokens**: Issue signed HS256 JWT tokens via `pyjwt` with explicit expiration (60 minutes UTC), issued-at (`iat`), token classification (`type="access"`), and issuer (`iss="personal-finance-tracker"`). Never store secrets or sensitive credentials in token payloads.
+  3. **Safe Legacy Account Enrollment**: Add `hashed_password` (nullable) to the `users` table via Alembic migration `6c8ca07763d0`. Legacy accounts without passwords cannot authenticate until safe password enrollment (`/api/v1/auth/enroll`) is completed.
+  4. **Server-Side Identity Derivation**: All financial API operations derive user ownership strictly from the verified server-side identity context (`current_user: User = Depends(get_current_user)`). Client-supplied `user_id` query/body parameters are strictly rejected.
+- **Rationale**:
+  - Argon2id is the OWASP-recommended password hashing standard resistant to GPU/ASIC cracking.
+  - Server-side identity injection prevents broken object level authorization (BOLA / IDOR) vulnerabilities.
+  - Safe enrollment satisfies Directive 3 by preserving existing user and account records without creating unauthenticated security holes.
+- **Consequences**:
+  - All financial endpoints require valid Bearer JWT tokens in `Authorization` header.
+  - Public endpoints are limited strictly to `/health`, `/api/v1/health`, `/api/v1/auth/register`, `/api/v1/auth/token`, and `/api/v1/auth/enroll`.
+
+---
+
+## ADR-019: Data Portability, Spreadsheet Formula Injection Defense, and Safe Backup Architecture
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 4 requires bank/credit card statement import (CSV and Excel XLSX) with duplicate detection, user data export, and database backup snapshots. Data imports/exports must be resilient against spreadsheet formula execution exploits, and database backups must not expose destructive restore capabilities without explicit authorization.
+- **Decision**:
+  1. **Statement Parsing Engine**: Use Pandas with `openpyxl` to parse CSV and XLSX file buffers into dataframes. Support configurable column mapping (`date_column`, `amount_column`, `description_column`, `category_column`, `type_column`), enforce file size limits ($\le 5\text{MB}$) and row count caps ($\le 1000\text{ rows}$).
+  2. **Duplicate Transaction Detection**: Query existing ledger transactions matching `(user_id, transaction_date, amount, description)`. Flag duplicates during dry-run preview (`POST /api/v1/data/import/preview`) without writing data. Batch commit (`POST /api/v1/data/import/commit`) writes transactions through `TransactionService` inside an atomic transaction.
+  3. **Formula Injection Mitigation**: Sanitize all exported cells starting with dangerous characters (`=, +, -, @, \t, \r`) by prefixing them with a single quote (`'`), preventing Excel/Calc from evaluating malicious expressions.
+  4. **User-Scoped JSON Backup Snapshot**: Export user data across all 11 domain models in a versioned envelope (`schema_version: "1.0.0"`) with exact Decimal string formatting. Strictly exclude password hashes and internal credentials.
+  5. **Non-Destructive Dry-Run Backup Validation**: Expose dry-run validation (`POST /api/v1/data/backup/validate`) verifying schema version and completeness. Destructive restore (`mode="REPLACE_USER_DATA"`) is strictly non-executable and not exposed in Phase 4.
+- **Rationale**:
+  - Comply with OWASP Top 10 guidelines on CSV/formula injection.
+  - Guarantees data portability without risking database corruption or accidental user data replacement.
+- **Consequences**:
+  - Users can export and preview imports safely without spreadsheet risks.
+  - Backups can be verified without altering database state.
+
+
 

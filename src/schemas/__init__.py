@@ -3,8 +3,15 @@
 from src.schemas.account import AccountCreate, AccountRead, AccountUpdate
 from src.schemas.budget import BudgetCreate, BudgetRead, BudgetUtilization
 from src.schemas.common import GenericResponse, HealthResponse
-from src.schemas.goal import SavingsGoalCreate, SavingsGoalProgress, SavingsGoalRead
+from src.schemas.goal import (
+    GoalContributionRequest,
+    GoalWithdrawalRequest,
+    SavingsGoalCreate,
+    SavingsGoalProgress,
+    SavingsGoalRead,
+)
 from src.schemas.investment import (
+    DividendRequest,
     InvestmentAssetRead,
     InvestmentBuyRequest,
     InvestmentHoldingRead,
@@ -15,8 +22,18 @@ from src.schemas.investment import (
 from src.schemas.loan import (
     AmortizationScheduleItem,
     LoanCreate,
+    LoanPaymentRequest,
     LoanPaymentScheduleRead,
     LoanRead,
+)
+from src.schemas.portability import (
+    BackupValidationResponse,
+    ImportCommitRequest,
+    ImportCommitResponse,
+    ImportCommitRow,
+    ImportPreviewResponse,
+    StatementMapping,
+    StatementRowPreview,
 )
 from src.schemas.recurring import RecurringRuleCreate, RecurringRuleRead
 from src.schemas.transaction import (
@@ -25,9 +42,17 @@ from src.schemas.transaction import (
     TransactionEntryCreate,
     TransactionEntryRead,
     TransactionRead,
+    TransactionReversalRequest,
     TransferCreate,
 )
-from src.schemas.user import UserCreate, UserRead
+from src.schemas.user import (
+    TokenResponse,
+    UserCreate,
+    UserEnrollPassword,
+    UserLogin,
+    UserRead,
+    UserRegister,
+)
 
 __all__ = [
     "GenericResponse",
@@ -61,4 +86,20 @@ __all__ = [
     "InvestmentHoldingRead",
     "InvestmentTransactionRead",
     "RealizedGainLossResult",
+    "DividendRequest",
+    "GoalContributionRequest",
+    "GoalWithdrawalRequest",
+    "LoanPaymentRequest",
+    "TransactionReversalRequest",
+    "TokenResponse",
+    "UserEnrollPassword",
+    "UserLogin",
+    "UserRegister",
+    "StatementMapping",
+    "StatementRowPreview",
+    "ImportPreviewResponse",
+    "ImportCommitRow",
+    "ImportCommitRequest",
+    "ImportCommitResponse",
+    "BackupValidationResponse",
 ]

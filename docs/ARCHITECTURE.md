@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/ARCHITECTURE.md`  
 > **STATUS**: APPROVED BASELINE  
 > **STACK**: Python 3.12 + SQL (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
+> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED)
 
 ---
 
@@ -58,10 +58,15 @@ personal-expense-tracker/
 │   │       ├── accounts.py
 │   │       ├── transactions.py
 │   │       ├── budgets.py
-│   │       └── analytics.py
+│   │       ├── goals.py
+│   │       ├── loans.py
+│   │       ├── investments.py
+│   │       ├── recurring.py
+│   │       ├── data_portability.py
+│   │       └── health.py
 │   ├── core/                     # Cross-Cutting Concerns
 │   │   ├── config.py             # Pydantic BaseSettings (.env loading & validation)
-│   │   ├── security.py           # Password hashing (Argon2id/bcrypt) & JWT handling
+│   │   ├── security.py           # Password hashing (Argon2id) & JWT handling (HS256)
 │   │   ├── exceptions.py         # Custom domain exceptions & HTTP mappings
 │   │   ├── logging.py            # Structured JSON logger configuration
 │   │   └── money.py              # Decimal monetary utilities (rounding, formatting)
@@ -98,9 +103,11 @@ personal-expense-tracker/
 │   │   ├── goal_service.py       # Savings milestones, contributions & progress
 │   │   ├── loan_service.py       # Amortization schedules & loan repayments
 │   │   ├── recurring_service.py  # Recurring rules, next dates & automated spawning
-│   │   └── investment_service.py # Trades, weighted cost basis & realized P&L
+│   │   ├── investment_service.py # Trades, weighted cost basis & realized P&L
+│   │   └── portability_service.py # Statement CSV/XLSX import, export & backup validation
 │   ├── schemas/                  # Pydantic v2 DTOs (Request / Response validation)
 │   │   ├── common.py             # GenericResponse[T], PaginationParams
+│   │   ├── user.py               # Auth & profile schemas
 │   │   ├── account.py
 │   │   ├── category.py
 │   │   ├── transaction.py
@@ -108,7 +115,8 @@ personal-expense-tracker/
 │   │   ├── goal.py
 │   │   ├── loan.py
 │   │   ├── recurring.py
-│   │   └── investment.py
+│   │   ├── investment.py
+│   │   └── portability.py        # Import/export/backup schemas
 │   └── frontend/                 # Streamlit User Interface
 │       ├── app.py                # Streamlit entry point (navigation, auth shell)
 │       ├── api_client.py         # HTTPX client communicating with FastAPI

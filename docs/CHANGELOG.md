@@ -9,11 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 4 (FastAPI REST API & Data Portability Services)
-- Expose all domain services via RESTful OpenAPI endpoints (`/api/v1/*`).
-- Implement bank statement CSV/Excel import wizard with duplicate transaction detection via Pandas.
-- Implement ledger CSV/Excel export streaming.
-- Implement database snapshot backup and restore facility.
+### Planned for Phase 5 (Streamlit Frontend Core UI & Core Pages)
+- Build responsive dark fintech UI shell in Streamlit with modern cards and navigation.
+- Implement Dashboard summary with net worth, income/expense cards, and quick actions.
+- Implement Accounts management page with creation, editing, balance reconciliation, and archiving.
+- Implement Transaction management page with multi-account filtering, manual entry forms, and transfer modals.
+- Implement Categories configuration page with color and icon pickers.
+
+---
+
+## [0.5.0] - 2026-11-15 (Phase 4: FastAPI REST API & Data Portability Services)
+
+### Added
+- **Authentication & Security Foundation (`src/core/security.py`, `src/api/routers/auth.py`)**:
+  - Implemented Argon2id password hashing and cryptographic verification via `pwdlib[argon2]`.
+  - Implemented signed, short-lived JSON Web Token (JWT) issuing and decoding using `pyjwt` (`HS256`, 60-minute lifetime, standard claims: `sub`, `exp`, `iat`, `type="access"`, `iss="personal-finance-tracker"`).
+  - Added Alembic migration `6c8ca07763d0` safely adding `hashed_password` (nullable) to the `users` table via `batch_alter_table`.
+  - Implemented `POST /api/v1/auth/register` (new user registration with secure Argon2id hash).
+  - Implemented `POST /api/v1/auth/token` (OAuth2 password form login returning standard OAuth2 Bearer token).
+  - Implemented `POST /api/v1/auth/enroll` (safe initial password enrollment for existing legacy unauthenticated users).
+  - Implemented `GET /api/v1/auth/me` (retrieval of current user profile; strictly excludes password hashes).
+  - Injected `get_current_user` into `get_current_user_id` so all financial endpoints automatically enforce JWT authentication.
+- **RESTful Domain Routers (`src/api/routers/`)**:
+  - `src/api/routers/transactions.py`: Income/expense posting (`POST /`), atomic transfers (`POST /transfer`), compensating reversals (`POST /{id}/reverse`), pagination/filtering (`GET /`), transaction detail (`GET /{id}`), and mathematical balance reconciliation (`GET /reconcile/{account_id}`).
+  - `src/api/routers/budgets.py`: Category budget allocations (`POST /`), single category utilization (`GET /utilization`), and period overviews (`GET /period`).
+  - `src/api/routers/goals.py`: Savings milestones (`POST /`, `GET /`), milestone contributions (`POST /{id}/contribute`), withdrawals (`POST /{id}/withdraw`), and progress calculations (`GET /{id}/progress`).
+  - `src/api/routers/loans.py`: Loan debt liabilities with auto-generated fixed-rate amortization schedules (`POST /`), loans list (`GET /`), loan details (`GET /{id}`), and payment instalment recording (`POST /{id}/payment`).
+  - `src/api/routers/investments.py`: Security purchase trades with weighted-average cost basis (`POST /buy`), liquidation trades with realized capital P&L (`POST /sell`), dividend earnings logs (`POST /dividend`), and portfolio holdings (`GET /holdings`).
+  - `src/api/routers/recurring.py`: Recurrence rules (`POST /`, `GET /`), due rule queries (`GET /due`), schedule execution with duplicate occurrence prevention (`POST /{id}/execute`), and pause/resume (`POST /{id}/pause`, `POST /{id}/resume`).
+- **Data Portability Pipeline (`src/services/portability_service.py`, `src/api/routers/data_portability.py`)**:
+  - `StatementImportService`: Pandas/openpyxl engine parsing CSV and XLSX statements with configurable column mappings (Date, Amount, Description, Category, Type), duplicate transaction detection, dry-run preview (`POST /api/v1/data/import/preview`), and atomic batch commit (`POST /api/v1/data/import/commit`).
+  - `DataExportService`: Filtered user transaction export streaming in RFC 4180 CSV (`GET /api/v1/data/export/csv`) and Excel XLSX (`GET /api/v1/data/export/xlsx`) with spreadsheet formula injection defense (`=, +, -, @, \t, \r` escaping).
+  - `BackupService`: Complete user-scoped JSON backup snapshot generation across all 11 database entities (`GET /api/v1/data/backup`) with exact Decimal string formatting, strictly excluding password hashes.
+  - Non-destructive dry-run backup validation endpoint (`POST /api/v1/data/backup/validate`) verifying schema version and completeness without modifying database state. Destructive restore is strictly non-executable.
+- **Automated Integration Test Suite**:
+  - Added 32 new comprehensive integration tests across `test_auth_api.py`, `test_transactions_api.py`, `test_budgets_api.py`, `test_goals_api.py`, `test_loans_api.py`, `test_investments_api.py`, `test_recurring_api.py`, and `test_data_portability_api.py`.
+  - Total automated tests increased from 87 to 119 tests (100% pass rate, 89% overall test coverage).
+  - All existing Account CRUD regression tests pass without modification.
+  - Preserved existing database account `('Primary Checking', 'USD', 1500.00)` in `data/finance.db`.
 
 ---
 

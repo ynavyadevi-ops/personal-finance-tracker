@@ -147,29 +147,37 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
 
 ## Phase 4: FastAPI REST API & Data Portability Services
 
-- **Objective**: Expose all domain services via RESTful API endpoints, implement bank statement CSV/Excel import pipelines with Pandas, and build export utilities.
+- **Objective**: Expose all domain services via RESTful API endpoints, implement bank statement CSV/Excel import pipelines with Pandas, and build export and backup utilities.
 - **Dependencies**: Phase 3 explicit approval.
-- **Status**: **PENDING AUTHORIZATION**.
-- **Explicit Scope**:
-  - FastAPI routers (`src/api/routers/`):
-    - `/api/v1/auth`: Authentication and tenant context injection.
-    - `/api/v1/accounts`: Protected account management.
-    - `/api/v1/transactions`: Ledger mutations, filtering, pagination, and atomic transfers.
-    - `/api/v1/budgets`: Budget caps, progress statistics.
-    - `/api/v1/goals`: Savings goals CRUD and contribution endpoints.
-    - `/api/v1/loans`: Loan accounts, payment schedules, and payoff projections.
-    - `/api/v1/investments`: Portfolio holdings and valuation endpoints.
-    - `/api/v1/recurring`: Recurring transaction rule management and queue execution.
-  - Data Portability Pipeline:
-    - Statement Import Wizard: Pandas-driven CSV/Excel parsing, column header mapping, preview, duplicate detection, batch commit.
-    - Ledger Export: RFC 4180 compliant CSV export stream and Excel (`.xlsx`) generation.
-    - JSON database snapshot backup and restore facility.
-- **Expected Deliverables**: Fully documented OpenAPI/Swagger endpoints (`/docs`) and tested data portability pipelines.
-- **Automated Tests**: HTTPX `AsyncClient` integration tests for all endpoints validating status codes (200, 201, 400, 404, 409, 422).
-- **Security Audit**: Bandit scan; file upload security checks (MIME validation, size limits, CSV injection defense).
-- **Dependency Audit**: `pip-audit` scan.
-- **Acceptance Criteria**: Integration test suite passes; statement import correctly deduplicates; export round-trips validate cleanly.
-- **Approval Gate**: Explicit user approval required to proceed to Phase 5.
+- **Status**: **COMPLETED & VERIFIED** (Phase gate active; awaiting explicit approval to begin Phase 5).
+- **Delivered Scope**:
+  - **Authentication & Security Foundation (`src/core/security.py`, `src/api/routers/auth.py`)**:
+    - Argon2id password hashing via `pwdlib[argon2]`.
+    - Short-lived signed JWT access tokens via `pyjwt` with UTC expiration, issuer validation, and signature verification.
+    - Password enrollment endpoint (`/api/v1/auth/enroll`) ensuring legacy unauthenticated accounts are preserved without silent password allocation.
+    - OAuth2 password form login (`/api/v1/auth/token`) and profile retrieval (`/api/v1/auth/me`).
+    - Server-side tenant extraction (`get_current_user`, `get_current_user_id`), never trusting client-supplied identity.
+  - **Financial REST API Endpoints (`src/api/routers/`)**:
+    - `/api/v1/accounts`: Protected account management with active filtering and soft delete.
+    - `/api/v1/transactions`: Income/expense posting, atomic transfers (`/transfer`), compensating reversals (`/{id}/reverse`), pagination, filters, and mathematical balance reconciliation (`/reconcile/{account_id}`).
+    - `/api/v1/budgets`: Budget allocations (`POST /budgets`), single category utilization (`/utilization`), period overviews (`/period`), threshold classification (NORMAL, WARNING, EXCEEDED), and rollover.
+    - `/api/v1/goals`: Savings milestones, contributions (`/{id}/contribute`), withdrawals (`/{id}/withdraw`), and progress tracking (`/{id}/progress`).
+    - `/api/v1/loans`: Debt obligations, auto-generated fixed-rate amortization schedules, payment instalment recording (`/{id}/payment`).
+    - `/api/v1/investments`: Securities purchasing (`/buy`) with weighted-average cost basis, sales (`/sell`) with unit sufficiency checks and realized P&L, dividend logs (`/dividend`), and holdings queries (`/holdings`).
+    - `/api/v1/recurring`: Recurrence rule definitions, due rule queries (`/due`), execution spawning ledger transactions with duplicate occurrence prevention (`/{id}/execute`), pause/resume (`/pause`, `/resume`).
+  - **Data Portability Pipeline (`src/services/portability_service.py`, `src/api/routers/data_portability.py`)**:
+    - Statement Import Wizard (`POST /api/v1/data/import/preview`, `POST /api/v1/data/import/commit`): Pandas/openpyxl CSV and XLSX parsing, configurable column mappings, validation limits (5MB, 1000 rows), duplicate detection against existing ledger records, and atomic batch commit.
+    - Data Export (`GET /api/v1/data/export/csv`, `GET /api/v1/data/export/xlsx`): Filtered transaction exports with formula injection defense (`=, +, -, @, \t, \r` escaping).
+    - Backup & Dry-Run Validation (`GET /api/v1/data/backup`, `POST /api/v1/data/backup/validate`): Full user-scoped JSON backup snapshot across 11 tables with exact Decimal string formatting. Destructive restore is strictly non-executable per security directives; only non-destructive export and dry-run validation are exposed.
+- **Verification & Tests**:
+  - 119 automated tests passing (74 unit tests, 45 integration tests, 100% pass rate).
+  - Code Coverage: 89% overall across `src/`.
+  - Ruff: 0 lint errors, all files formatted.
+  - Mypy: 0 type issues across 67 source files in strict mode.
+  - Bandit: 0 security issues across 6,770 lines of code.
+  - pip-audit: 0 known vulnerabilities.
+  - Preserved existing database account `('Primary Checking', 'USD', 1500.00)` in `data/finance.db`.
+- **Approval Gate**: Stopped at Phase 4 completion gate. Explicit user approval required to proceed to Phase 5.
 
 ---
 
