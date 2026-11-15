@@ -76,6 +76,53 @@ class ConflictError(AppException):
         )
 
 
+class PermissionDeniedError(AppException):
+    """Raised when a user attempts to access an unauthorized or cross-tenant resource."""
+
+    def __init__(
+        self,
+        message: str = "Permission denied",
+        code: str = "FORBIDDEN",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=details,
+        )
+
+
+class CurrencyMismatchError(ValidationError):
+    """Raised when a financial operation involves incompatible currencies."""
+
+    def __init__(
+        self,
+        message: str = "Currency mismatch between accounts",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="CURRENCY_MISMATCH",
+            details=details,
+        )
+
+
+class InsufficientUnitsError(ValidationError):
+    """Raised when attempting to sell more investment units than currently held."""
+
+    def __init__(
+        self,
+        message: str = "Insufficient units available for sale",
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message=message,
+            code="INSUFFICIENT_UNITS",
+            details=details,
+        )
+
+
 async def app_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Serialize custom AppException into standardized JSON response."""
     app_exc = exc if isinstance(exc, AppException) else AppException(str(exc))

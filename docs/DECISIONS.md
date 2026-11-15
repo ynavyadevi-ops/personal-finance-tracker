@@ -25,6 +25,7 @@
 - [ADR-014: Authoritative Nine-Phase Roadmap (Phases 0–8)](#adr-014-authoritative-nine-phase-roadmap-phases-08)
 - [ADR-015: Protected Status for Existing Financial Account CRUD](#adr-015-protected-status-for-existing-financial-account-crud)
 - [ADR-016: Relational Schema Architecture, Double-Entry Ledger Representation, and Decimal Precision Storage](#adr-016-relational-schema-architecture-double-entry-ledger-representation-and-decimal-precision-storage)
+- [ADR-017: Domain Services Architecture & Accounting Conventions](#adr-017-domain-services-architecture--accounting-conventions)
 
 ---
 
@@ -286,4 +287,28 @@
 - **Consequences**:
   - Phase 3 accounting services can rely on balanced ledger rows and atomic transfers without ad-hoc single-column balance drift.
   - Foreign key restrict requires accounts with transactions to be archived rather than hard-deleted, maintaining complete auditability.
+
+---
+
+## ADR-017: Domain Services Architecture & Accounting Conventions
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 3 requires implementing pure Python domain logic to execute financial transactions, validate double-entry ledger invariants, process atomic transfers, calculate budget utilization with rollovers, manage savings goals, compute fixed-rate loan amortization, evaluate recurring schedules, and calculate investment cost basis and realized gains.
+- **Decision**:
+  1. **Separation of Services & Repositories**: Create specialized domain services in `src/services/` backed by dedicated repository classes in `src/repositories/`. Each service encapsulates business rules, tenant authorization (`user_id`), and input validations, keeping the repository layer focused strictly on query composition.
+  2. **Double-Entry Ledger Balancing**: Enforce the fundamental accounting invariant $\sum \text{Debits} == \sum \text{Credits}$ across all balanced multi-entry transactions. Internal transfers generate balanced dual entries (1 `CREDIT` on source account, 1 `DEBIT` on destination account) ensuring conservation of funds.
+  3. **Strict Currency Compatibility**: Reject cross-currency transfers with `CurrencyMismatchError` (HTTP 422). The system forbids silent currency conversion or relabeling.
+  4. **Idempotency Protection**: Implement transparent idempotency caching via transaction tags (`idempotency:<key>`). Replaying a request with an existing idempotency key safely returns the cached transaction without creating duplicate database records.
+  5. **Compensating Transaction Reversal**: Transaction reversals create compensating ledger entries rather than performing hard row deletions, preserving full immutable auditability.
+  6. **Budget Spending Aggregation**: Monthly category spending aggregations strictly exclude internal transfers and income, computing utilization percentages against configurable alert thresholds: Normal ($<80\%$), Warning ($80\% - 99.99\%$), and Exceeded ($\ge 100\%$), with optional unspent rollover from previous months.
+  7. **Exact Fixed-Rate Loan Amortization**: Use exact Decimal compound interest calculations for EMI generation: $\text{EMI} = P \times \frac{r(1+r)^n}{(1+r)^n - 1}$. The final instalment absorbs rounding cents so the final remaining balance reaches exactly ₹0.00.
+  8. **Weighted-Average Cost Basis for Securities**: Security purchases recalculate weighted-average cost basis: $\text{Cost Basis} = \frac{\text{Previous Cost} + \text{New Trade Amount}}{\text{Total Units}}$. Sales enforce unit sufficiency with `InsufficientUnitsError` (HTTP 422) and compute realized capital gains/losses.
+- **Rationale**:
+  - Encapsulating business rules in domain services guarantees that future Phase 4 REST endpoints and data import pipelines execute identical, validated business rules.
+  - Transparent idempotency prevents double charges resulting from network retries.
+  - Weighted-average cost basis conforms to standard Indian income tax accounting rules for capital gains.
+- **Consequences**:
+  - All financial state mutations must flow through domain services; raw database mutations in routers or scripts are strictly prohibited.
+
 

@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SPEC.md`  
 > **STATUS**: BASELINE APPROVED  
 > **STACK**: Python (FastAPI, Streamlit, SQLAlchemy, Alembic, Pydantic, Pandas, Plotly)  
-> **PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
+> **PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
 
 ---
 

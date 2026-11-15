@@ -9,13 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)
-- Implement domain transaction service supporting double-entry accounting entries.
-- Implement atomic inter-account transfer execution with debit/credit balance adjustment.
-- Implement monthly category budget tracking, calculation of utilization percentages, and rollover logic.
-- Implement savings goal contribution tracking and progress calculations.
-- Implement loan repayment schedules and amortization logic.
-- Implement recurring transaction rule processing queue.
+### Planned for Phase 4 (FastAPI REST API & Data Portability Services)
+- Expose all domain services via RESTful OpenAPI endpoints (`/api/v1/*`).
+- Implement bank statement CSV/Excel import wizard with duplicate transaction detection via Pandas.
+- Implement ledger CSV/Excel export streaming.
+- Implement database snapshot backup and restore facility.
+
+---
+
+## [0.4.0] - 2026-11-15 (Phase 3: Core Accounting Engine, Financial Services & Domain Logic)
+
+### Added
+- **Core Financial Domain Services (`src/services/`)**:
+  - `src/services/ledger_service.py`: `LedgerService` implementing double-entry accounting invariant validation ($\sum \text{Debits} == \sum \text{Credits}$), deterministic account balance computation across asset and liability accounts, and bank statement balance reconciliation.
+  - `src/services/transaction_service.py`: `TransactionService` supporting income recording (debit to asset), expense recording (credit to asset/liability), atomic inter-account transfers, transparent idempotency protection, and compensating transaction reversals.
+  - `src/services/budget_service.py`: `BudgetService` managing monthly category allocations, SQL monthly spending aggregation (strictly excluding transfers), threshold status calculation (NORMAL, WARNING, EXCEEDED), and unspent rollover carryforward.
+  - `src/services/goal_service.py`: `SavingsGoalService` orchestrating savings milestone targets, contributions, withdrawals, progress percentages, and automatic achievement tracking.
+  - `src/services/loan_service.py`: `LoanService` implementing exact fixed-rate amortization schedules using Decimal compound formulas, instalment repayments with principal vs. interest separation, and loan payoff settlement.
+  - `src/services/recurring_service.py`: `RecurringService` computing next occurrence dates across all calendar frequencies (Daily, Weekly, Biweekly, Monthly, Quarterly, Yearly), due rule evaluation, automated transaction spawning, and duplicate execution prevention.
+  - `src/services/investment_service.py`: `InvestmentService` tracking security purchases with weighted-average cost basis recalculation, sales with holding sufficiency validation and realized gain/loss math, and dividend logging.
+- **Repository Data Access Layer (`src/repositories/`)**:
+  - Added dedicated repositories: `TransactionRepository`, `CategoryRepository`, `BudgetRepository`, `SavingsGoalRepository`, `LoanRepository`, `RecurringRepository`, and `InvestmentRepository`.
+- **Pydantic v2 DTO Schemas (`src/schemas/`)**:
+  - Added validation schemas: `TransactionCreate`, `TransferCreate`, `TransactionRead`, `AccountReconciliation`, `BudgetCreate`, `BudgetUtilization`, `SavingsGoalCreate`, `SavingsGoalProgress`, `LoanCreate`, `AmortizationScheduleItem`, `RecurringRuleCreate`, `InvestmentBuyRequest`, `InvestmentSellRequest`, and `RealizedGainLossResult`.
+- **Domain Exceptions (`src/core/exceptions.py`)**:
+  - Added `CurrencyMismatchError` (HTTP 422), `InsufficientUnitsError` (HTTP 422), and `PermissionDeniedError` (HTTP 403).
+- **Automated Unit Test Suite**:
+  - Added 46 comprehensive unit tests across all 7 new domain services in `tests/unit/`.
+  - Total automated test count increased from 41 to 87 tests (100% pass rate).
+  - Code formatting: 75 files verified with Ruff.
+  - Type checking: 0 errors across 56 files in Mypy strict mode.
+  - Security scanning: 0 issues in Bandit (4,969 LOC) and 0 vulnerabilities in pip-audit.
 
 ---
 

@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/TESTING.md`  
 > **STATUS**: APPROVED BASELINE  
 > **STACK**: Python 3.12 (Pytest, pytest-asyncio, HTTPX, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
+> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
 
 ---
 
@@ -155,4 +155,40 @@ A development phase is marked complete ONLY when all gate criteria are met:
 - **Runtime Probes**:
   - FastAPI server (`src.api.main:app`) on port 8005 -> `/health` returned 200 OK (`database_connected: True`).
   - Streamlit UI (`src/frontend/app.py`) on port 8505 -> `/_stcore/health` returned 200 OK.
+
+---
+
+## 8. Phase 3 Verification & Test Results
+
+### 8.1 Test Execution Metrics
+- **Total Automated Tests**: 87 passed, 0 failed, 0 skipped (100% pass rate).
+- **Execution Time**: ~2.3 seconds.
+- **Test Distribution (74 Unit, 13 Integration)**:
+  - **Phase 3 Services Unit Tests (46 tests)**:
+    - `tests/unit/test_ledger_service.py` (8 tests: balanced entries pass, empty/unbalanced fail, non-positive fail, asset account balance, liability balance, reconciliation matching and discrepancy, not found handling).
+    - `tests/unit/test_transaction_service.py` (10 tests: income debit, expense credit, transfer credit/debit atomic commit, same account error, currency mismatch error, cross-user error, idempotency caching, compensating transaction reversal, non-positive validation, foreign category error).
+    - `tests/unit/test_budget_service.py` (7 tests: budget creation, update existing, invalid amount, income category rejection, threshold status calculation [NORMAL, WARNING, EXCEEDED], previous month rollover unspent calculation, transfer exclusion).
+    - `tests/unit/test_goal_service.py` (6 tests: goal creation, invalid target, contributions and achievement toggle, withdrawals, overdraft rejection, not found).
+    - `tests/unit/test_loan_service.py` (5 tests: fixed-rate amortization mathematical accuracy, 0% interest division, loan creation with schedules, repayment and liability settlement, invalid inputs).
+    - `tests/unit/test_recurring_service.py` (5 tests: next occurrence calculation across all frequencies, rule creation, validation, due rule execution with duplicate prevention, pause and resume).
+    - `tests/unit/test_investment_service.py` (5 tests: initial purchase with cost basis, subsequent purchases with weighted-average cost basis, sale with realized gains and holding reduction, insufficient units error, dividend logging).
+  - **Phase 1-2 Existing Protected Regression Tests (41 tests)**:
+    - `tests/unit/test_account_service.py` (6 tests)
+    - `tests/unit/test_config.py` (2 tests)
+    - `tests/unit/test_frontend.py` (2 tests)
+    - `tests/unit/test_models.py` (4 tests)
+    - `tests/unit/test_money.py` (4 tests)
+    - `tests/unit/test_phase2_models.py` (10 tests)
+    - `tests/integration/test_accounts_api.py` (10 tests)
+    - `tests/integration/test_health_api.py` (2 tests)
+    - `tests/integration/test_migrations.py` (1 test)
+
+### 8.2 Static Quality & Security Audits
+- **Ruff Linter**: `ruff check .` -> **0 errors** (all checks passed).
+- **Ruff Formatter**: `ruff format --check .` -> **75 files correctly formatted**.
+- **Mypy Type Checking**: `mypy` -> **Success: no issues found in 56 source files**.
+- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (4,969 lines scanned).
+- **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
+- **Database Record Preservation**: `Primary Checking ('USD', 1500.00)` verified untouched in `data/finance.db`.
+
 

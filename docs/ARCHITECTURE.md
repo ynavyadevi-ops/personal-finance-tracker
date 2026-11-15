@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/ARCHITECTURE.md`  
 > **STATUS**: APPROVED BASELINE  
 > **STACK**: Python 3.12 + SQL (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
+> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
 
 ---
 
@@ -68,30 +68,47 @@ personal-expense-tracker/
 │   ├── db/                       # Database & ORM
 │   │   ├── session.py            # SQLAlchemy engine, sessionmaker, and base
 │   │   ├── base.py               # DeclarativeBase with common timestamp mixins
-│   │   └── models/               # SQLAlchemy ORM Models
+│   │   ├── seed.py               # Development seeder (categories, default user, demo assets)
+│   │   └── models/               # SQLAlchemy 2.0 ORM Models
 │   │       ├── user.py
 │   │       ├── account.py
 │   │       ├── category.py
 │   │       ├── transaction.py
 │   │       ├── budget.py
+│   │       ├── goal.py
+│   │       ├── loan.py
 │   │       ├── recurring.py
+│   │       ├── investment.py
 │   │       └── audit.py
-│   ├── repositories/             # Data Access Layer (SQLAlchemy queries)
-│   │   ├── base.py               # Generic repository interface
+│   ├── repositories/             # Data Access Layer (SQLAlchemy queries & tenant scoping)
+│   │   ├── base.py
 │   │   ├── account_repo.py
+│   │   ├── category_repo.py
 │   │   ├── transaction_repo.py
-│   │   └── budget_repo.py
-│   ├── services/                 # Domain Business Logic
-│   │   ├── account_service.py
-│   │   ├── transaction_service.py
-│   │   ├── budget_service.py
-│   │   └── analytics_service.py
-│   ├── schemas/                  # Pydantic v2 DTOs (Request / Response)
+│   │   ├── budget_repo.py
+│   │   ├── goal_repo.py
+│   │   ├── loan_repo.py
+│   │   ├── recurring_repo.py
+│   │   └── investment_repo.py
+│   ├── services/                 # Domain Business Logic Layer
+│   │   ├── account_service.py    # Protected account CRUD & archiving
+│   │   ├── ledger_service.py     # Double-entry invariant validation & reconciliation
+│   │   ├── transaction_service.py # Income, expense, and atomic transfer execution
+│   │   ├── budget_service.py     # Budget allocations, monthly spending & rollovers
+│   │   ├── goal_service.py       # Savings milestones, contributions & progress
+│   │   ├── loan_service.py       # Amortization schedules & loan repayments
+│   │   ├── recurring_service.py  # Recurring rules, next dates & automated spawning
+│   │   └── investment_service.py # Trades, weighted cost basis & realized P&L
+│   ├── schemas/                  # Pydantic v2 DTOs (Request / Response validation)
 │   │   ├── common.py             # GenericResponse[T], PaginationParams
 │   │   ├── account.py
+│   │   ├── category.py
 │   │   ├── transaction.py
 │   │   ├── budget.py
-│   │   └── analytics.py
+│   │   ├── goal.py
+│   │   ├── loan.py
+│   │   ├── recurring.py
+│   │   └── investment.py
 │   └── frontend/                 # Streamlit User Interface
 │       ├── app.py                # Streamlit entry point (navigation, auth shell)
 │       ├── api_client.py         # HTTPX client communicating with FastAPI

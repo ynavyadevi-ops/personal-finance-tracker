@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED — AWAITING PHASE 3 APPROVAL)
+> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED — AWAITING PHASE 4 APPROVAL)
 
 ---
 
@@ -15,16 +15,20 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 0 (Project Foundation and Documentation)**: **COMPLETE**.
 - **Phase 1 (Environment Setup and Application Foundation)**: **COMPLETE & REMEDIATED**.
 - **Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)**: **COMPLETE & VERIFIED**.
-  - All 12 domain relational tables and Alembic migrations fully implemented and tested.
-  - Applied migration `472e31906438_create_phase_2_relational_models.py` to `data/finance.db`.
-  - Existing database records preserved intact: `Primary Checking ('USD', 1500.00)` untouched.
-  - Downgrade and re-upgrade cycle verified on disposable test database.
-  - Development database seeder expanded with 13 standard Indian categories, sample ETF asset (`NIFTYBEES`), and sample savings goal (`Emergency Fund`).
-  - 41 automated tests (31 unit tests, 10 integration tests) passing with 100% pass rate.
-  - 89% test coverage across `src/`.
-  - Ruff (0 errors), Mypy strict (0 errors in 36 files), Bandit SAST (0 issues in 2,628 lines), pip-audit (0 CVE vulnerabilities).
-  - Backend and frontend runtime health probes verified (both 200 OK).
-- **Execution is halted at the Phase 2 Approval Gate awaiting explicit user authorization to begin Phase 3 execution.**
+- **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
+  - 7 specialized financial domain services implemented in `src/services/` (`LedgerService`, `TransactionService`, `BudgetService`, `SavingsGoalService`, `LoanService`, `RecurringService`, `InvestmentService`).
+  - 7 dedicated repositories implemented in `src/repositories/` (`TransactionRepository`, `CategoryRepository`, `BudgetRepository`, `SavingsGoalRepository`, `LoanRepository`, `RecurringRepository`, `InvestmentRepository`).
+  - Pydantic v2 validation DTOs implemented in `src/schemas/`.
+  - Domain exceptions implemented in `src/core/exceptions.py`.
+  - Double-entry ledger invariants enforced ($\sum \text{Debits} == \sum \text{Credits}$).
+  - Multi-tenant security verified (strict cross-user account/category isolation).
+  - Currency compatibility strictly enforced with `CurrencyMismatchError` (HTTP 422).
+  - Idempotency caching prevents duplicate financial mutations.
+  - Compensating transaction reversals preserve immutable audit trails.
+  - 87 automated tests (74 unit tests, 13 integration tests) passing with 100% pass rate.
+  - Ruff (0 errors, 75 files formatted), Mypy strict (0 errors in 56 files), Bandit SAST (0 issues in 4,969 lines), pip-audit (0 CVE vulnerabilities).
+  - Existing database records preserved intact: `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
+- **Execution is halted at the Phase 3 Approval Gate awaiting explicit user authorization to begin Phase 4 execution.**
 
 ---
 
@@ -211,4 +215,66 @@ A comprehensive, empirical integrity audit was conducted across the database sch
   - *Evidence*: Clean runs across all six quality tools.
   - *Severity*: Informational.
   - *Blocks Phase 3*: No.
+
+---
+
+## 8. Phase 3 Architecture & Financial Services Delivery
+
+Phase 3 delivers the complete business logic layer governing transactions, accounts, budgets, goals, debts, recurrence, and investments.
+
+### 8.1 Domain Services & Accounting Logic
+
+1. **`LedgerService`** (`src/services/ledger_service.py`):
+   - Enforces the core double-entry accounting invariant ($\sum \text{Debits} == \sum \text{Credits}$).
+   - Deterministically calculates balances based on account classification:
+     - Asset accounts (`CHECKING`, `SAVINGS`, `CASH`, `INVESTMENT`): $\text{Balance} = \text{Opening} + \sum \text{Debits} - \sum \text{Credits}$.
+     - Liability accounts (`CREDIT_CARD`, `LOAN`): $\text{Balance} = \text{Opening} + \sum \text{Credits} - \sum \text{Debits}$.
+   - Provides statement balance reconciliation with discrepancy quantification.
+
+2. **`TransactionService`** (`src/services/transaction_service.py`):
+   - Handles `record_income` (Debit to asset), `record_expense` (Credit to asset/liability), and `record_transfer` (Credit source, Debit destination).
+   - Validates that source and destination accounts are distinct.
+   - Enforces strict multi-tenant authorization (`account.user_id == user_id`).
+   - Rejects cross-currency transfers with `CurrencyMismatchError` (HTTP 422).
+   - Prevents duplicate operations via tag-based idempotency caching (`idempotency:<key>`).
+   - Implements immutable transaction reversals using compensating entries.
+
+3. **`BudgetService`** (`src/services/budget_service.py`):
+   - Configures monthly category spending caps.
+   - Aggregates actual monthly expenses using SQL queries that strictly exclude internal transfers and income.
+   - Evaluates visual threshold alert statuses: `NORMAL` ($< 80\%$), `WARNING` ($80\% - 99.99\%$), `EXCEEDED` ($\ge 100\%$).
+   - Carries forward unspent balances from the prior month when `rollover_enabled=True`.
+
+4. **`SavingsGoalService`** (`src/services/goal_service.py`):
+   - Sets savings targets with target dates.
+   - Tracks incremental contributions, decrementing withdrawals, and progress percentages.
+   - Automatically sets `is_achieved = True` when cumulative savings reach or exceed target.
+
+5. **`LoanService`** (`src/services/loan_service.py`):
+   - Generates exact fixed-rate amortization schedules using Decimal compound interest mathematics: $\text{EMI} = P \times \frac{r(1+r)^n}{(1+r)^n - 1}$.
+   - Resolves rounding fractional cents in the final instalment ($n$), ensuring remaining balance reaches exactly ₹0.00.
+   - Records repayments with explicit principal reduction vs. interest expense separation.
+   - Automatically marks loans as settled when balance reaches zero.
+
+6. **`RecurringService`** (`src/services/recurring_service.py`):
+   - Computes calendar recurrence intervals across `DAILY`, `WEEKLY`, `BIWEEKLY`, `MONTHLY`, `QUARTERLY`, and `YEARLY` schedules.
+   - Identifies active due rules and spawns validated transactions via `TransactionService`.
+   - Prevents duplicate executions on the same date.
+   - Provides schedule pausing and resumption.
+
+7. **`InvestmentService`** (`src/services/investment_service.py`):
+   - Tracks portfolio security purchases with weighted-average cost basis recalculation: $\text{Cost Basis} = \frac{\text{Previous Cost} + \text{New Trade Amount}}{\text{Total Units}}$.
+   - Enforces holding sufficiency on sell operations with `InsufficientUnitsError` (HTTP 422).
+   - Calculates gross proceeds, net proceeds after fees, cost of sold units, and realized capital gains/losses.
+   - Records dividend income without altering held unit counts.
+
+### 8.2 Phase 4 Implementation Readiness
+
+Phase 4 will expose all completed domain services through RESTful FastAPI endpoints (`/api/v1/*`), build the Pandas bank statement CSV/Excel import wizard, and implement RFC 4180 export utilities.
+
+- **Prerequisites for Phase 4**:
+  - Explicit human sign-off approving Phase 3 completion.
+  - Retain all 87 automated unit and integration tests.
+  - Maintain zero CVEs and clean static analysis scores.
+
 

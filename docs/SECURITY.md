@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SECURITY.md`  
 > **STATUS**: ENFORCED & ACTIVE  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Pydantic v2, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 2 — Database Modeling, SQLAlchemy ORM & Alembic Migrations (COMPLETED)
+> **CURRENT PHASE**: Phase 3 — Core Accounting Engine, Financial Services & Domain Logic (COMPLETED)
 
 ---
 
@@ -160,4 +160,31 @@ The Phase 2 database modeling implementation establishes multi-layered integrity
 4. **Immutable Audit Trail (`audit_logs`)**:
    - Dedicated `audit_logs` table stores JSON snapshots of state mutations (`old_values`, `new_values`), action type, timestamp, IP address, and user agent.
    - The table does not expose update or delete relationships, ensuring audit record immutability.
+
+---
+
+## 9. Phase 3 Service-Layer Security & Accounting Invariants
+
+The Phase 3 domain service layer implements defense-in-depth security policies:
+
+1. **Multi-Tenant Access Enforcement**:
+   - Every service operation accepts and validates the authenticated `user_id`.
+   - In `TransactionService.record_transfer`, both `source_account_id` and `destination_account_id` are independently validated for `account.user_id == user_id`, preventing cross-tenant transfer injection.
+   - `CategoryRepository` validates that assigned categories belong to the authenticated user or are global system categories (`user_id is None`).
+
+2. **Double-Entry Mathematical Conservation**:
+   - `LedgerService.validate_balanced_entries()` verifies that total debits equal total credits for multi-leg transactions.
+   - Inter-account transfers atomically produce 1 debit and 1 credit of equal amount.
+
+3. **Idempotency Protection Against Replays**:
+   - Submitting duplicate transaction requests with the same `idempotency_key` returns the cached transaction without duplicating financial records or balances.
+
+4. **Currency Safety**:
+   - Cross-currency transfers between accounts of different currencies are rejected with `CurrencyMismatchError` (HTTP 422). The system strictly forbids silent conversion or balance relabeling.
+
+5. **Security Inventory Boundary Checks**:
+   - `InvestmentService` enforces `InsufficientUnitsError` when an attempt is made to sell more securities than currently held in the account.
+   - `SavingsGoalService` prohibits withdrawing more savings than the accumulated balance.
+   - `LoanService` prohibits overpayment of loans and verifies positive loan tenures.
+
 
