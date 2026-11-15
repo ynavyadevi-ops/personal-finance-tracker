@@ -59,7 +59,7 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
   - Currency remediation: System-wide default currency aligned to **INR (₹)** while preserving existing records without silent conversion.
 - **Expected Deliverables**: Operational backend and frontend, passing test suite, clean linting/typing, and zero security vulnerabilities.
 - **Automated Tests**: 30 automated tests passing (18 unit tests, 12 API integration tests).
-- **Security Audit**: Bandit scan (0 findings across 1,381 LOC); `pip-audit` scan (0 CVE vulnerabilities).
+- **Security Audit**: Bandit scan (0 findings across 1,385 LOC); `pip-audit` scan (0 CVE vulnerabilities).
 - **Acceptance Criteria**: `ruff check .` clean; `mypy` clean; `pytest` passes; `pip-audit` clean.
 - **Approval Gate**: Explicit user approval required to proceed to Phase 2.
 
@@ -78,6 +78,7 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
     - `Budget`: Monthly category expenditure caps and rollover policies.
     - `SavingsGoal`: Target amounts, target dates, current allocated balance, and milestone tracking.
     - `LoanDebtSchedule`: Principal, interest rate, term, minimum payments, and amortization tracking.
+    - `InvestmentHolding`: Asset symbol, name, asset class (Equity, Mutual Fund, ETF, Gold), quantity, cost basis, valuation tracking, and account foreign keys.
     - `RecurringRule`: Automated schedules (daily, weekly, monthly, annual) for recurring bills and income.
     - `AuditLog`: Immutable change ledger tracking all balance-altering financial mutations.
   - Alembic migration scripts: autogenerate and review migrations for both SQLite and PostgreSQL dialects.

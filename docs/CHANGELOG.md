@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned for Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)
-- Complete SQLAlchemy 2.0 relational models: `User`, `FinancialAccount` (with all account types), `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `RecurringRule`, `AuditLog`.
+- Complete SQLAlchemy 2.0 relational models: `User`, `FinancialAccount` (with all account types), `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `InvestmentHolding`, `RecurringRule`, `AuditLog`.
 - Dual-database Alembic migrations supporting both SQLite and PostgreSQL.
 - Seeding script expansion for standard categories, recurring rules, and sample goals.
 - Model-level regression tests for cascades, indexes, and precision.

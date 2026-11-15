@@ -116,7 +116,7 @@ streamlit run src/frontend/app.py --server.port 8501
 
 ### Verification & Testing
 ```bash
-# Run complete test suite (21 tests)
+# Run complete test suite (30 tests)
 pytest
 
 # Code formatting & linting

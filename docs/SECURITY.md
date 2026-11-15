@@ -107,7 +107,7 @@ pip-audit --desc
 ### 7.1 Static Application Security Testing (Bandit)
 - **Tool**: Bandit v1.8.6 on Python 3.12.13
 - **Command**: `bandit -r src/`
-- **Scope**: 1,381 lines of application code across `src/`
+- **Scope**: 1,385 lines of application code across `src/`
 - **Result**: **0 Issues Identified** (Zero High, Medium, Low, or Undefined issues)
 - **Verified Mitigations**:
   - Zero hardcoded secrets (`B105`, `B106`, `B107` checks passed).

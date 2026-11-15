@@ -216,21 +216,28 @@ class User(Base):
     categories: Mapped[List["Category"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     transactions: Mapped[List["Transaction"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     budgets: Mapped[List["Budget"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    holdings: Mapped[List["InvestmentHolding"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    goals: Mapped[List["SavingsGoal"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    loans: Mapped[List["LoanDebtSchedule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    recurring_rules: Mapped[List["RecurringRule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 class Account(Base):
-    __tablename__ = "accounts"
+    __tablename__ = "financial_accounts"
     
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     account_type: Mapped[AccountType] = mapped_column(Enum(AccountType), nullable=False)
-    initial_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0.00"), nullable=False)
+    opening_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0.00"), nullable=False)
     currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
-    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="accounts")
     transactions: Mapped[List["Transaction"]] = relationship(back_populates="account")
+    holdings: Mapped[List["InvestmentHolding"]] = relationship(back_populates="account")
+    loan_schedule: Mapped[Optional["LoanDebtSchedule"]] = relationship(back_populates="account", uselist=False)
+    recurring_rules: Mapped[List["RecurringRule"]] = relationship(back_populates="account")
 
 class Category(Base):
     __tablename__ = "categories"
@@ -292,6 +299,81 @@ class Budget(Base):
         Index("ix_budgets_unique_period", "user_id", "category_id", "month", "year", unique=True),
     )
 
+class InvestmentHolding(Base):
+    __tablename__ = "investment_holdings"
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
+    symbol: Mapped[str] = mapped_column(String(20), index=True, nullable=False) # e.g., TATASTEEL, RELIANCE, NIFTYBEES
+    asset_name: Mapped[str] = mapped_column(String(100), nullable=False) # e.g., Tata Steel Ltd
+    asset_type: Mapped[str] = mapped_column(String(50), nullable=False) # EQUITY, MUTUAL_FUND, ETF, BOND, GOLD
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False) # 4 decimals for fractional shares/mutual fund units
+    cost_basis_per_unit: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    total_cost: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    current_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 2))
+    current_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(18, 2))
+    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="holdings")
+    account: Mapped["Account"] = relationship(back_populates="holdings")
+
+class SavingsGoal(Base):
+    __tablename__ = "savings_goals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    target_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    current_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0.00"), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
+    target_date: Mapped[Optional[date]] = mapped_column(Date)
+    is_achieved: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="goals")
+
+class LoanDebtSchedule(Base):
+    __tablename__ = "loan_debt_schedules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
+    lender_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    principal_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    remaining_balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    interest_rate: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False) # Annual interest rate (e.g., 8.50%)
+    minimum_monthly_payment: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    due_date: Mapped[Optional[date]] = mapped_column(Date)
+    is_settled: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="loans")
+    account: Mapped["Account"] = relationship(back_populates="loan_schedule")
+
+class RecurringRule(Base):
+    __tablename__ = "recurring_rules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True, nullable=False)
+    category_id: Mapped[Optional[str]] = mapped_column(ForeignKey("categories.id", ondelete="SET NULL"), index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="INR", nullable=False)
+    frequency: Mapped[str] = mapped_column(String(20), nullable=False) # DAILY, WEEKLY, MONTHLY, YEARLY
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    next_occurrence: Mapped[date] = mapped_column(Date, index=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="recurring_rules")
+    account: Mapped["Account"] = relationship(back_populates="recurring_rules")
+    category: Mapped[Optional["Category"]] = relationship(back_populates="recurring_rules")
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     
@@ -326,9 +408,9 @@ To prevent precision loss from IEEE 754 floating-point math:
 
 - **Transaction Scope**: Database writes are wrapped in atomic transaction contexts.
 - **Atomic Transfer Implementation**:
-  When a user transfers amount $\$X$ from Account A to Account B, the `TransactionService` creates two paired records inside a single `session.begin()` block:
-  1. An `EXPENSE` (or `TRANSFER_OUT`) on Account A of amount $\$X$.
-  2. An `INCOME` (or `TRANSFER_IN`) on Account B of amount $\$X$.
+  When a user transfers amount ₹X from Account A to Account B, the `TransactionService` creates two paired records inside a single `session.begin()` block:
+  1. An `EXPENSE` (or `TRANSFER_OUT`) on Account A of amount ₹X.
+  2. An `INCOME` (or `TRANSFER_IN`) on Account B of amount ₹X.
   3. Both records reference each other via `linked_transaction_id`.
   If an exception occurs during any step, SQLAlchemy rolls back the entire session, ensuring no funds are created or destroyed.
 

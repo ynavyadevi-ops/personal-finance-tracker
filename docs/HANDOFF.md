@@ -58,7 +58,7 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
   - **Phase 0: Project Foundation and Documentation** *(Completed)*
   - **Phase 1: Environment Setup, Python Tooling & Core Project Scaffolding** *(Completed)*
   - **Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations** *(Next Phase)*
-    - Comprehensive data models: `User`, `FinancialAccount`, `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `RecurringRule`, `AuditLog`.
+    - Comprehensive data models: `User`, `FinancialAccount`, `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `InvestmentHolding`, `RecurringRule`, `AuditLog`.
   - **Phase 3: Core Accounting Engine, Financial Services & Domain Logic**
     - Double-entry balance calculation, atomic transfer transactions, Decimal precision.
     - Recurring transaction rule queue engine.
@@ -201,7 +201,7 @@ pip-audit
 | **Ruff Linter** | `ruff check .` | **All checks passed** | **PASS** |
 | **Ruff Formatter** | `ruff format --check .` | **38 files already formatted** | **PASS** |
 | **Mypy Type Checker**| `mypy` | **Success: no issues found in 28 source files** (strict mode) | **PASS** |
-| **Bandit SAST** | `bandit -r src/` | **0 issues identified** across 1,381 LOC (Zero High/Med/Low) | **PASS** |
+| **Bandit SAST** | `bandit -r src/` | **0 issues identified** across 1,385 LOC (Zero High/Med/Low) | **PASS** |
 | **pip-audit** | `pip-audit` | **No known vulnerabilities found** across all 96 dependencies | **PASS** |
 | **FastAPI Startup** | In-process uvicorn server startup probe | **HTTP 200 OK** on `/health` (`status: healthy`, `database_connected: True`) | **PASS** |
 | **Streamlit Startup**| `AppTest.from_file("src/frontend/app.py").run()` | **Success: True**, clean execution with zero unhandled exceptions | **PASS** |
@@ -215,6 +215,7 @@ pip-audit
 2. [x] **Financial Record Preservation**: Existing database records (`'Primary Checking'`, `1500.00`, `USD`) are preserved intact without automated conversion or relabeling. Previously applied migration `fba246fe5321` left unmodified.
 3. [x] **Authoritative Roadmap Formally Adopted**: Authoritative 9-phase lifecycle (**Phase 0 through Phase 8**) adopted in `docs/PHASES.md`, `README.md`, `docs/DECISIONS.md` (ADR-014), and `docs/CHANGELOG.md`.
 4. [x] **Protected Account Functionality Safeguarded**: Existing Account CRUD functionality preserved and defended by 15 dedicated regression tests.
+5. [x] **Documentation Cleanup & Consistency**: Obsolete Phase 9 references eliminated; outdated USD examples replaced; Phase 2 scope confirmed as strictly Database Modeling, SQLAlchemy ORM & Alembic Migrations (including `InvestmentHolding` model for portfolio/holdings tracking); test counts and status statements verified.
 
 ### Gate Requirement:
 - **Phase 1 Remediation is COMPLETE**.

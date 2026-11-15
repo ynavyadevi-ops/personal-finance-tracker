@@ -71,23 +71,25 @@
 
 ## 3. Scope Definition
 
-### MVP Scope (Phases 1 through 7)
-- Local single-user mode running on embedded SQLite (`data/finance.db`).
-- Full Account management (Checking, Savings, Credit, Cash, Investment, Loan).
-- Transaction ledger (Income, Expense, Transfer) with Category and Tag support.
+### MVP & Phased Roadmap Scope (Phases 0 through 8)
+- Local-first operation running on embedded SQLite (`data/finance.db`) with production-ready PostgreSQL migration path.
+- Full Account management (Checking, Savings, Credit, Cash, Investment, Loan) in INR (₹).
+- Investment portfolio data models and holdings valuation tracking.
+- Transaction ledger (Income, Expense, Transfer) with Category, Tag, and Recurring Rule support.
 - Monthly category budgeting with visual utilization bars.
-- Interactive Plotly visualizations (Cash flow, Category breakdown, Net worth).
-- Standard CSV/Excel export and basic bank statement CSV import via Pandas.
+- Savings goals and debt amortization tracking.
+- Interactive Plotly visualizations (Cash flow, Category breakdown, Net worth trajectory).
+- AI financial insights (rule-based spending trends and optional smart categorization with explicit user consent).
+- Standard CSV/Excel export and bank statement CSV import via Pandas.
 - Fully typed FastAPI REST API and responsive Streamlit UI.
-- Comprehensive Pytest unit and integration test suites.
+- Comprehensive Pytest unit and integration test suites, Bandit SAST, and pip-audit security certification.
+- Production readiness: Docker packaging and verified SQLite-to-PostgreSQL migration.
 
-### Future Scope (Phase 9+ & Post-Release)
+### Future Scope (Post-Release Enhancements)
 - Multi-user authentication (JWT with OAuth2 password bearer / Auth0).
-- Production deployment on cloud PostgreSQL (RDS, Neon, Supabase) with connection pooling.
-- Multi-currency support with automated exchange rate conversion.
-- Automated bank feed aggregation via Open Banking APIs (Plaid / Nordigen).
-- Optional AI receipt scanning (OCR) and predictive transaction categorization (strictly with explicit user consent).
-- Containerized deployment using Docker and Docker Compose.
+- Multi-currency live exchange rate conversion engine.
+- Automated bank feed aggregation via Open Banking APIs.
+- Optional AI receipt scanning (OCR).
 
 ---
 

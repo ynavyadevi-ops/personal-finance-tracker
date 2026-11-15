@@ -123,5 +123,4 @@ A development phase is marked complete ONLY when all gate criteria are met:
 | **Phase 5** | Streamlit UI framework operational, custom Plotly charts render cleanly, session state helpers tested. |
 | **Phase 6** | Full Streamlit application pages functional; AppTest / HTTPX verifies account, transaction, and budget user journeys. |
 | **Phase 7** | Pandas analytics aggregate historical data, Plotly graphs render without errors, CSV/Excel export/import passes round-trip tests. |
-| **Phase 8** | Full Pytest test suite passes (100% pass rate); Bandit SAST reports 0 issues; pip-audit reports 0 vulnerabilities. |
-| **Phase 9** | PostgreSQL migration verified with `verify_pg_migration.py`; Docker containers build and run cleanly; production deployment verified. |
+| **Phase 8** | Full Pytest test suite passes (100% pass rate); Bandit SAST reports 0 issues; pip-audit reports 0 vulnerabilities; PostgreSQL migration verified with `verify_pg_migration.py`; Docker containers build and launch cleanly; production release certified. |
