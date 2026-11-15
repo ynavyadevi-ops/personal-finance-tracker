@@ -39,13 +39,6 @@ class UserLogin(BaseModel):
     password: str = Field(..., min_length=1)
 
 
-class UserEnrollPassword(BaseModel):
-    """Schema for safe initial password enrollment for legacy unauthenticated users."""
-
-    email: EmailStr
-    new_password: str = Field(..., min_length=8, max_length=128)
-
-
 class TokenResponse(BaseModel):
     """Standard OAuth2 Bearer token response."""
 

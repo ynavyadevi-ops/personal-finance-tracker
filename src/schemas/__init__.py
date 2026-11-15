@@ -48,7 +48,6 @@ from src.schemas.transaction import (
 from src.schemas.user import (
     TokenResponse,
     UserCreate,
-    UserEnrollPassword,
     UserLogin,
     UserRead,
     UserRegister,
@@ -92,7 +91,6 @@ __all__ = [
     "LoanPaymentRequest",
     "TransactionReversalRequest",
     "TokenResponse",
-    "UserEnrollPassword",
     "UserLogin",
     "UserRegister",
     "StatementMapping",

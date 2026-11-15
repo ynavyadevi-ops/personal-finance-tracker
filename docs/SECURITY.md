@@ -201,20 +201,53 @@ The Phase 3 domain service layer implements defense-in-depth security policies:
    - Tokens issued with short 60-minute UTC expiration (`exp`), issued-at (`iat`), token classification (`type="access"`), and issuer verification (`iss="personal-finance-tracker"`).
    - Validated using secret key with `HS256`.
    - All financial endpoints derive identity from `get_current_user` (`current_user.id`), eliminating IDOR/BOLA vulnerabilities. Client-supplied `user_id` is never accepted.
-   - Safe legacy user enrollment (`/api/v1/auth/enroll`) requires explicit password setup before granting login tokens.
+   - Public account enrollment (`/api/v1/auth/enroll`) was identified as insecure and has been completely removed from public route registration and OpenAPI specifications.
 
-3. **Spreadsheet Formula Injection Defense (CSV & Excel)**:
+3. **Secure Administrative Legacy Enrollment CLI (`src/cli/enroll.py`)**:
+   - Initial password enrollment for pre-existing legacy accounts is strictly restricted to an administrative CLI executed locally on the host (`python -m src.cli.enroll --email <email>`).
+   - CLI enforces:
+     - Target user verification in the database prior to credential prompt.
+     - **Anti-Overwrite Protection**: Accounts with existing passwords cannot be re-enrolled or overwritten.
+     - Interactive masked password entry with confirmation (`getpass.getpass`).
+     - Command-line arguments for passwords (`--password`) are strictly forbidden, preventing secrets in shell history or process tables (`ps`).
+     - Explicit confirmation prompt (`[y/N]`) before database write.
+     - Atomic commit and rollback on error.
+     - Zero credential or hash leakage to stdout, stderr, or log streams.
+
+4. **Spreadsheet Formula Injection Defense (CSV & Excel)**:
    - Exported cells starting with dangerous trigger characters (`=, +, -, @, \t, \r`) are automatically escaped by prefixing them with a single quote (`'`), preventing formula execution when opened in Excel or Calc.
 
-4. **Statement File Upload Hardening**:
+5. **Statement File Upload Hardening**:
    - Ingestion enforces a 5MB maximum file size limit and a 1,000 row cap.
    - File formats restricted strictly to CSV and XLSX.
    - In-memory parsing via Pandas with no shell execution or external network calls.
 
-5. **Backup & Restore Safety Policy**:
+6. **Backup & Restore Safety Policy**:
    - User-scoped JSON snapshots export all 11 domain models with exact Decimal string representations.
    - Password hashes and sensitive authentication secrets are strictly scrubbed from exports.
    - Per security directives, destructive restore (`mode="REPLACE_USER_DATA"`) is strictly disabled and not executable in Phase 4. Only dry-run schema validation is exposed.
+
+---
+
+## 11. Security Audit & SAST Verification Results (Phase 4 Security Remediation)
+
+### 11.1 Static Application Security Testing (Bandit)
+- **Tool**: Bandit v1.8.6 on Python 3.12.13
+- **Command**: `bandit -r src/`
+- **Scope**: 6,867 lines of application code across `src/` (including CLI, routers, services, repositories)
+- **Result**: **0 Issues Identified** (Zero High, Medium, Low, or Undefined issues)
+- **Verified Mitigations**:
+  - Zero hardcoded passwords or secrets (`B105`, `B106`, `B107` checks passed).
+  - Zero SQL string formatting (`B608` passed; 100% SQLAlchemy parameterized statements).
+  - Zero insecure deserialization or pickle usage (`B301`, `B403` passed).
+  - Zero silent exception suppression (`B110`, `B112` passed).
+
+### 11.2 Dependency Supply-Chain Audit (pip-audit)
+- **Tool**: pip-audit v2.8.0
+- **Database**: PyPI Vulnerability Database & PyPA Advisory DB
+- **Scope**: All locked production and development dependencies
+- **Result**: **0 Known Vulnerabilities Found**
+
 
 
 

@@ -57,11 +57,10 @@ def test_login_invalid_credentials_fails(unauthenticated_client: TestClient) -> 
     assert res.json()["error"]["code"] == "UNAUTHORIZED"
 
 
-def test_enroll_password_for_legacy_user(
+def test_enroll_endpoint_removed_returns_404(
     unauthenticated_client: TestClient, db_session: Session
 ) -> None:
-    """Verify existing unauthenticated user can safely enroll initial password."""
-    # Seed legacy user with no password hash
+    """Verify that the public /auth/enroll endpoint has been completely eliminated and returns 404."""
     legacy_user = User(
         id="legacy-user-456",
         name="Legacy User",
@@ -76,16 +75,16 @@ def test_enroll_password_for_legacy_user(
         "new_password": "NewSecretPassword123!",
     }
     enroll_res = unauthenticated_client.post("/api/v1/auth/enroll", json=enroll_payload)
-    assert enroll_res.status_code == 200
-    assert enroll_res.json()["data"]["email"] == "legacy@example.dev"
+    assert enroll_res.status_code == 404
 
-    # Now verify login succeeds
-    login_res = unauthenticated_client.post(
-        "/api/v1/auth/token",
-        data={"username": "legacy@example.dev", "password": "NewSecretPassword123!"},
-    )
-    assert login_res.status_code == 200
-    assert "access_token" in login_res.json()
+
+def test_enroll_endpoint_absent_from_openapi(unauthenticated_client: TestClient) -> None:
+    """Verify that /api/v1/auth/enroll is completely absent from the registered OpenAPI specification."""
+    res = unauthenticated_client.get("/openapi.json")
+    assert res.status_code == 200
+    openapi_schema = res.json()
+    paths = openapi_schema.get("paths", {})
+    assert "/api/v1/auth/enroll" not in paths
 
 
 def test_auth_me_profile_retrieval(unauthenticated_client: TestClient, db_session: Session) -> None:

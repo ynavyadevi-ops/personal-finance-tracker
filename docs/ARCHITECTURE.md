@@ -64,6 +64,8 @@ personal-expense-tracker/
 │   │       ├── recurring.py
 │   │       ├── data_portability.py
 │   │       └── health.py
+│   ├── cli/                      # Administrative CLI utilities
+│   │   └── enroll.py             # Secure manual password enrollment for legacy users
 │   ├── core/                     # Cross-Cutting Concerns
 │   │   ├── config.py             # Pydantic BaseSettings (.env loading & validation)
 │   │   ├── security.py           # Password hashing (Argon2id) & JWT handling (HS256)

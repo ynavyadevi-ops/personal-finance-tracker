@@ -7,14 +7,13 @@ from sqlalchemy.orm import Session
 
 from src.api.dependencies import get_current_user
 from src.core.config import settings
-from src.core.exceptions import AuthenticationError, ConflictError, NotFoundError
+from src.core.exceptions import AuthenticationError, ConflictError
 from src.core.security import create_access_token, hash_password, verify_password
 from src.db.models.user import User
 from src.db.session import get_db
 from src.schemas.common import GenericResponse
 from src.schemas.user import (
     TokenResponse,
-    UserEnrollPassword,
     UserRead,
     UserRegister,
 )
@@ -77,38 +76,6 @@ def login_for_access_token(
     return TokenResponse(
         access_token=token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-
-
-@router.post(
-    "/enroll",
-    response_model=GenericResponse[UserRead],
-    summary="Safe initial password enrollment for existing legacy user accounts",
-)
-def enroll_legacy_password(
-    payload: UserEnrollPassword,
-    db: Session = Depends(get_db),
-) -> GenericResponse[UserRead]:
-    """Provide safe initial password enrollment for pre-existing accounts that lack a password."""
-    email = payload.email.strip().lower()
-    stmt = select(User).where(User.email == email)
-    user = db.execute(stmt).scalar_one_or_none()
-
-    if not user:
-        raise NotFoundError(f"User account with email '{payload.email}' was not found.")
-
-    if user.hashed_password is not None:
-        raise ConflictError(
-            "This user account is already enrolled with a password. Please use standard login."
-        )
-
-    user.hashed_password = hash_password(payload.new_password)
-    db.commit()
-    db.refresh(user)
-
-    return GenericResponse(
-        success=True,
-        data=UserRead.model_validate(user),
     )
 
 
