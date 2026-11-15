@@ -57,7 +57,7 @@ class FinancialAccount(Base, TimestampMixin):
     currency: Mapped[str] = mapped_column(
         String(3),
         nullable=False,
-        default="USD",
+        default="INR",
     )
     opening_balance: Mapped[Decimal] = mapped_column(
         Numeric(18, 2),

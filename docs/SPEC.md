@@ -10,7 +10,7 @@
 ## 1. Functional Requirements (FR)
 
 ### Module 1: Account Management
-- **FR-01 (Account Creation)**: The system shall allow users to create financial accounts with a name, account type (`CHECKING`, `SAVINGS`, `CREDIT_CARD`, `CASH`, `INVESTMENT`, `LOAN`), initial balance (as `Decimal`), and currency (default: `USD`).
+- **FR-01 (Account Creation)**: The system shall allow users to create financial accounts with a name, account type (`CHECKING`, `SAVINGS`, `CREDIT_CARD`, `CASH`, `INVESTMENT`, `LOAN`), initial balance (as `Decimal`), and currency (default: `INR`).
 - **FR-02 (Account Modification & Archive)**: Users may edit account names, types, and descriptions. Accounts linked to existing transactions cannot be hard-deleted; they may only be archived (`is_archived = True`) to preserve historical integrity.
 - **FR-03 (Deterministic Balance Recalculation)**: Current account balance shall be computed deterministically:
   $$\text{Balance} = \text{Initial Balance} + \sum \text{Income} - \sum \text{Expense} + \sum \text{Net Transfers}$$
@@ -129,10 +129,10 @@ flowchart TD
 ## 5. Business Rules & Financial Invariants
 
 1. **BR-01 (Strict Positive Amounts)**: All transaction amounts must be strictly positive (`Decimal > 0`). Transaction direction is determined exclusively by the `type` attribute (`INCOME`, `EXPENSE`, `TRANSFER`).
-2. **BR-02 (Transfer Balance Conservation)**: For any internal transfer of amount $\$X$ from Account A to Account B:
-   - Account A is decremented by exactly $\$X$.
-   - Account B is incremented by exactly $\$X$.
-   - Net system balance change is exactly $\$0.00$.
+2. **BR-02 (Transfer Balance Conservation)**: For any internal transfer of amount ₹X from Account A to Account B:
+   - Account A is decremented by exactly ₹X.
+   - Account B is incremented by exactly ₹X.
+   - Net system balance change is exactly ₹0.00.
 3. **BR-03 (Account Deletion Safety)**: An account containing active transactions cannot be deleted. Users must archive the account (`is_archived = True`), hiding it from active form pickers while preserving historical balance audits.
 4. **BR-04 (Calendar Month Boundaries)**: Budget limits are bounded to the calendar month (e.g., `2026-11-01` to `2026-11-30`). Transactions outside this range do not consume this budget allotment.
 5. **BR-05 (Negative Balances)**: Credit cards and loan accounts carry negative balances representing liabilities. Asset accounts (Checking, Savings, Cash) trigger a soft Streamlit UI warning when balance drops below zero, but operations are not blocked.
@@ -142,19 +142,19 @@ flowchart TD
 ## 6. Acceptance Criteria (Given-When-Then)
 
 ### AC-01: Log an Expense Transaction
-- **Given** an active Checking Account with a balance of \$1,000.00
-- **When** the user logs an Expense of \$50.00 under "Groceries" on today's date
-- **Then** the transaction is persisted in the database, the Checking Account balance displays \$950.00, and the "Groceries" monthly budget consumed amount increases by \$50.00.
+- **Given** an active Checking Account with a balance of ₹10,000.00
+- **When** the user logs an Expense of ₹500.00 under "Groceries" on today's date
+- **Then** the transaction is persisted in the database, the Checking Account balance displays ₹9,500.00, and the "Groceries" monthly budget consumed amount increases by ₹500.00.
 
 ### AC-02: Record an Atomic Account Transfer
-- **Given** Account A has \$500.00 and Account B has \$200.00
-- **When** the user records a Transfer of \$150.00 from Account A to Account B
-- **Then** both balances update simultaneously in an atomic SQLAlchemy transaction; Account A reflects \$350.00 and Account B reflects \$350.00. If an error occurs midway, neither balance changes.
+- **Given** Account A has ₹5,000.00 and Account B has ₹2,000.00
+- **When** the user records a Transfer of ₹1,500.00 from Account A to Account B
+- **Then** both balances update simultaneously in an atomic SQLAlchemy transaction; Account A reflects ₹3,500.00 and Account B reflects ₹3,500.00. If an error occurs midway, neither balance changes.
 
 ### AC-03: Budget Utilization Visual Indicator
-- **Given** a "Dining Out" category budget of \$200.00 for the current month with \$180.00 already spent
-- **When** the user logs an Expense of \$30.00 under "Dining Out"
-- **Then** the total spent updates to \$210.00 (105%), the progress bar switches to Crimson (alert state), and an "Over Budget" notification banner is rendered.
+- **Given** a "Dining Out" category budget of ₹2,000.00 for the current month with ₹1,800.00 already spent
+- **When** the user logs an Expense of ₹300.00 under "Dining Out"
+- **Then** the total spent updates to ₹2,100.00 (105%), the progress bar switches to Crimson (alert state), and an "Over Budget" notification banner is rendered.
 
 ### AC-04: Export Filtered Transactions to CSV
 - **Given** a user has 150 transactions recorded in 2026

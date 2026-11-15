@@ -167,7 +167,11 @@ elif selected_nav == "🏦 Accounts":
                 with st.container():
                     col_info, col_action = st.columns([4, 1])
                     with col_info:
-                        bal = format_currency(acc.get("opening_balance", "0.00"))
+                        curr = acc.get("currency", "INR")
+                        sym = "₹" if curr == "INR" else ("$" if curr == "USD" else f"{curr} ")
+                        bal = format_currency(
+                            acc.get("opening_balance", "0.00"), currency_symbol=sym
+                        )
                         st.markdown(
                             f"""
                             <div class="fintech-card">
@@ -214,11 +218,11 @@ elif selected_nav == "🏦 Accounts":
 
             col_inst, col_curr, col_bal = st.columns([2, 1, 2])
             with col_inst:
-                acc_inst = st.text_input("Institution Name", placeholder="e.g. Chase, Fidelity")
+                acc_inst = st.text_input("Institution Name", placeholder="e.g. HDFC, SBI, ICICI")
             with col_curr:
-                acc_curr = st.text_input("Currency", value="USD", max_chars=3)
+                acc_curr = st.text_input("Currency", value="INR", max_chars=3)
             with col_bal:
-                acc_balance = st.text_input("Opening Balance ($)", value="0.00")
+                acc_balance = st.text_input("Opening Balance (₹)", value="0.00")
 
             submitted = st.form_submit_button("Create Account")
             if submitted:

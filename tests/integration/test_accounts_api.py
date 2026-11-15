@@ -16,8 +16,8 @@ def test_create_and_retrieve_account(client: TestClient) -> None:
     payload = {
         "name": "Personal Checking",
         "account_type": "CHECKING",
-        "institution_name": "JPMorgan Chase",
-        "currency": "USD",
+        "institution_name": "State Bank of India",
+        "currency": "INR",
         "opening_balance": "1250.75",
     }
     create_res = client.post("/api/v1/accounts", json=payload)
@@ -26,6 +26,7 @@ def test_create_and_retrieve_account(client: TestClient) -> None:
     created_data = create_res.json()["data"]
     account_id = created_data["id"]
     assert created_data["name"] == "Personal Checking"
+    assert created_data["currency"] == "INR"
     assert created_data["opening_balance"] == "1250.75"
     assert created_data["is_active"] is True
 
@@ -115,6 +116,18 @@ def test_create_account_zero_balance(client: TestClient) -> None:
     )
     assert res.status_code == 201
     assert res.json()["data"]["opening_balance"] == "0.00"
+    assert res.json()["data"]["currency"] == "INR"
+
+
+def test_create_account_default_currency_is_inr(client: TestClient) -> None:
+    """Verify that omitting currency in payload defaults to INR."""
+    payload = {
+        "name": "Default Currency Account",
+        "account_type": "SAVINGS",
+        "opening_balance": "5000.00",
+    }
+    res = client.post("/api/v1/accounts", json=payload)
+    assert res.status_code == 201
     assert res.json()["data"]["currency"] == "INR"
 
 

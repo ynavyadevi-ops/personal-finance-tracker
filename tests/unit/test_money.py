@@ -30,6 +30,7 @@ def test_to_decimal_invalid_input() -> None:
 
 def test_format_currency() -> None:
     """Verify currency string formatting with commas and symbols."""
-    assert format_currency(Decimal("1250.50")) == "$1,250.50"
-    assert format_currency("5000000.00") == "$5,000,000.00"
-    assert format_currency(Decimal("-50.25")) == "-$50.25"
+    assert format_currency(Decimal("1250.50")) == "₹1,250.50"
+    assert format_currency("5000000.00") == "₹5,000,000.00"
+    assert format_currency(Decimal("-50.25")) == "-₹50.25"
+    assert format_currency(Decimal("100.00"), currency_symbol="$") == "$100.00"

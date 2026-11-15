@@ -71,17 +71,16 @@ The repository governance and technical designs are thoroughly documented across
 
 ## 4. Nine-Phase Development Lifecycle
 
-Progress is strictly gated across nine sequential stages:
+Progress is strictly gated across nine sequential stages (Phases 0–8):
 1. **Phase 0: Project Foundation and Documentation** *(Completed)*
-2. **Phase 1: Environment Setup, Python Tooling & Scaffolding** *(Completed)*
-3. **Phase 2: Database Modeling, SQLAlchemy & Alembic Migrations** *(Next Phase — Awaiting Approval)*
-4. **Phase 3: Core Domain Services, Pydantic Schemas & Financial Arithmetic**
-5. **Phase 4: FastAPI REST API, Endpoints & Authentication**
-6. **Phase 5: Streamlit UI Framework, Layout & Reusable Widgets**
-7. **Phase 6: Streamlit Application Pages (Accounts, Transactions, Budgets)**
-8. **Phase 7: Analytics, Plotly Visualizations & Pandas Data Processing**
-9. **Phase 8: Comprehensive Testing (Pytest/HTTPX), Security Audits (Bandit, pip-audit) & Performance**
-10. **Phase 9: Production Readiness, Dockerization, PostgreSQL Migration Verification & Deployment**
+2. **Phase 1: Environment Setup, Python Tooling & Application Foundation** *(Completed & Remediated)*
+3. **Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations** *(Next Phase — Awaiting Approval)*
+4. **Phase 3: Core Accounting Engine, Financial Services & Domain Logic**
+5. **Phase 4: FastAPI REST API & Data Portability Services**
+6. **Phase 5: Streamlit Frontend Core UI & Core Pages**
+7. **Phase 6: Advanced Feature Pages & Specialized Tracking**
+8. **Phase 7: Analytics, Plotly Visualizations & AI Insights**
+9. **Phase 8: Comprehensive Verification, Security Auditing & Production Readiness**
 
 ---
 

@@ -9,15 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 2 (Core Accounting & Transaction Engine)
-- Complete transaction models (`Transaction`, `TransactionType`, `TransactionSplit`).
-- Double-entry balance calculation and balance integrity invariants.
-- Transaction categorization and transaction query/filter APIs.
-- CSV bank statement parsing and import pipeline.
+### Planned for Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)
+- Complete SQLAlchemy 2.0 relational models: `User`, `FinancialAccount` (with all account types), `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `RecurringRule`, `AuditLog`.
+- Dual-database Alembic migrations supporting both SQLite and PostgreSQL.
+- Seeding script expansion for standard categories, recurring rules, and sample goals.
+- Model-level regression tests for cascades, indexes, and precision.
 
 ---
 
 ## [0.2.0] - 2026-11-15 (Phase 1: Environment and Application Foundation)
+
+### Changed & Remediated
+- **Currency System Alignment to INR (₹)**:
+  - Transitioned default currency from USD to **INR (₹)** across SQLAlchemy models (`FinancialAccount.currency`), Pydantic schemas (`AccountCreate.currency`), monetary utilities (`format_currency`), and Streamlit forms.
+  - Preserved existing database records without automated conversion or exchange-rate distortion.
+  - Guaranteed migration immutability by leaving previously applied migration `fba246fe5321` intact.
+- **Authoritative Roadmap Adoption (Phases 0–8)**:
+  - Reconciled documentation roadmap to the authoritative 9-phase lifecycle (Phases 0 through 8).
+  - Explicitly mapped recurring transactions, savings goals, loans & debts, investments, and AI insights to dedicated delivery phases.
+- **Protected Status for Existing Account CRUD**:
+  - Formally protected existing account models, repository, service, and FastAPI REST endpoints.
+  - Added 8 unit and integration regression tests (total 30 automated tests, 100% pass rate).
 
 ### Added
 - **Python 3.12 Virtual Environment & Dependency Locking**:

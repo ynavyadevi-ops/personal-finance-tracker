@@ -45,7 +45,7 @@
     amount = Decimal("10.50")
     ```
   - Database mapping uses `Numeric(18, 2)`.
-  - Presentation formatting uses `f"${amount:,.2f}"` or `locale` formatting.
+  - Presentation formatting uses `format_currency(amount)` or `f"₹{amount:,.2f}"`.
 
 ---
 

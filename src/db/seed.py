@@ -42,8 +42,8 @@ def seed_database(session: Session) -> None:
             user_id=user.id,
             name="Primary Checking",
             account_type=AccountType.CHECKING,
-            institution_name="First National Bank",
-            currency="USD",
+            institution_name="State Bank of India",
+            currency="INR",
             opening_balance=Decimal("1500.00"),
             is_active=True,
         )

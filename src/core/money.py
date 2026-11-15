@@ -23,8 +23,8 @@ def to_decimal(value: str | int | float | Decimal) -> Decimal:
         raise ValueError(f"Cannot convert '{value}' to valid financial Decimal") from err
 
 
-def format_currency(value: Decimal | str | int | float, currency_symbol: str = "$") -> str:
-    """Format monetary decimal to formatted string (e.g. '$1,250.50')."""
+def format_currency(value: Decimal | str | int | float, currency_symbol: str = "₹") -> str:
+    """Format monetary decimal to formatted string (e.g. '₹1,250.50')."""
     dec = to_decimal(value)
     sign = "-" if dec < 0 else ""
     abs_dec = abs(dec)

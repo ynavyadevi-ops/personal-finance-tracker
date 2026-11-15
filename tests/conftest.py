@@ -112,7 +112,7 @@ def sample_account(db_session: Session, sample_user: User) -> FinancialAccount:
         name="Test Checking",
         account_type=AccountType.CHECKING,
         institution_name="Test Bank",
-        currency="USD",
+        currency="INR",
         opening_balance=Decimal("2500.50"),
         is_active=True,
     )

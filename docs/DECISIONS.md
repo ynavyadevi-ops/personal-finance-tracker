@@ -21,6 +21,9 @@
 - [ADR-010: Phased Implementation Lifecycle with Approval Gates](#adr-010-phased-implementation-lifecycle-with-approval-gates)
 - [ADR-011: Synchronous Engine for SQLite in Local Development](#adr-011-synchronous-engine-for-sqlite-in-local-development)
 - [ADR-012: Pinned Dependency Upgrades for Proactive CVE Remediation](#adr-012-pinned-dependency-upgrades-for-proactive-cve-remediation)
+- [ADR-013: Default Currency Selection (Indian Rupee - INR / ₹)](#adr-013-default-currency-selection-indian-rupee---inr---)
+- [ADR-014: Authoritative Nine-Phase Roadmap (Phases 0–8)](#adr-014-authoritative-nine-phase-roadmap-phases-08)
+- [ADR-015: Protected Status for Existing Financial Account CRUD](#adr-015-protected-status-for-existing-financial-account-crud)
 
 ---
 
@@ -207,3 +210,57 @@
   - Maintains strict 100% clean security pass in `pip-audit`.
 - **Consequences**:
   - All environments and CI pipelines use reproducible pinned versions verified by `pip-audit`.
+
+---
+
+## ADR-013: Default Currency Selection (Indian Rupee - INR / ₹)
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: The approved default currency for the Personal Finance Tracker application is the Indian Rupee (INR / ₹). Initial scaffolding defaulted to USD ($). Existing financial records in development databases must be preserved without silent conversion or exchange-rate drift, and previously applied migrations must not be modified in place.
+- **Decision**: Set the application default currency to `INR` with symbol `₹` across SQLAlchemy models, Pydantic schemas, UI text inputs, and formatting utilities (`src/core/money.py`). Existing database records retain their original numeric values and currency tags without automatic alteration.
+- **Rationale**:
+  - Adheres strictly to the user's regional and currency specifications.
+  - Enforces ledger integrity by prohibiting silent or automatic exchange-rate conversions of existing balances.
+  - Preserves migration immutability: the underlying schema (`sa.String(3)`) natively supports `INR` without requiring destructive DDL alterations.
+- **Consequences**:
+  - New accounts default to `INR` and display with `₹`.
+  - Formatting helper `format_currency` defaults to `₹`.
+
+---
+
+## ADR-014: Authoritative Nine-Phase Roadmap (Phases 0–8)
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Project documentation previously exhibited an off-by-one labeling inconsistency, referencing 10 stages labeled Phase 0 through Phase 9 while intending a nine-phase lifecycle. Furthermore, required features (recurring transactions, savings goals, loans & debts, investments, AI insights) required explicit phase ownership.
+- **Decision**: Consolidate the lifecycle into a single authoritative **Nine-Phase Roadmap numbered Phase 0 through Phase 8**:
+  - Phase 0: Project Foundation and Documentation (COMPLETED)
+  - Phase 1: Environment Setup & Application Foundation (COMPLETED & REMEDIATED)
+  - Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations (NEXT PHASE)
+  - Phase 3: Core Accounting Engine, Financial Services & Domain Logic
+  - Phase 4: FastAPI REST API & Data Portability Services
+  - Phase 5: Streamlit Frontend Core UI & Core Pages
+  - Phase 6: Advanced Feature Pages & Specialized Tracking
+  - Phase 7: Analytics, Plotly Visualizations & AI Insights
+  - Phase 8: Comprehensive Verification, Security Auditing & Production Readiness
+- **Rationale**:
+  - Reconciles roadmap documentation with approved project requirements.
+  - Retains Phase 0 and Phase 1 numbering and completed deliverables without churn.
+  - Maps every required functional capability into an explicit delivery phase.
+- **Consequences**:
+  - `docs/PHASES.md`, `README.md`, and `docs/HANDOFF.md` are unified on the 0–8 sequence.
+
+---
+
+## ADR-015: Protected Status for Existing Financial Account CRUD
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: During Phase 1, basic Financial Account CRUD endpoints, repository, service, and UI registration forms were implemented ahead of the original Phase 2/4/6 schedule.
+- **Decision**: Designate all existing account CRUD components as **Protected Approved Functionality**. These components shall not be removed, rewritten, or refactored.
+- **Rationale**:
+  - Respects Directive 3 (Preserve Approved Functionality).
+  - Backed by 15 dedicated unit and integration regression tests verifying creation, duplicate conflicts, not-found handling, multi-tenant isolation, updating, and soft-delete archiving.
+- **Consequences**:
+  - Future phases build directly upon the existing `AccountService`, `AccountRepository`, and accounts REST router.

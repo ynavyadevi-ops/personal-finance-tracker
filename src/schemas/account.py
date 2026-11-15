@@ -18,7 +18,7 @@ class AccountBase(BaseModel):
     )
     institution_name: str | None = Field(None, max_length=100, description="Financial institution.")
     currency: str = Field(
-        default="USD", min_length=3, max_length=3, description="ISO 4217 3-letter currency code."
+        default="INR", min_length=3, max_length=3, description="ISO 4217 3-letter currency code."
     )
     opening_balance: Decimal = Field(
         default=Decimal("0.00"), description="Starting balance in exact Decimal."

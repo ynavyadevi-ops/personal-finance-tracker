@@ -31,7 +31,7 @@ def test_financial_account_creation_and_relationship(
         name="Emergency Savings",
         account_type=AccountType.SAVINGS,
         institution_name="Ally Bank",
-        currency="USD",
+        currency="INR",
         opening_balance=Decimal("10000.55"),
         is_active=True,
     )

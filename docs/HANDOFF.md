@@ -18,10 +18,10 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
   - Modular FastAPI backend implemented with health checks and initial financial accounts REST endpoints.
   - SQLite database persistence configured with SQLAlchemy 2.0 and Alembic migrations (`fba246fe5321`).
   - Streamlit frontend application built with a dark fintech UI and decoupled HTTP API communication.
-  - 29 automated tests (18 unit tests, 11 API integration tests) passing with 100% pass rate.
+  - 30 automated tests (18 unit tests, 12 API integration tests) passing with 100% pass rate.
   - Strict type checking (Mypy) and linting/formatting (Ruff) passing with zero errors across all source files.
   - Security audit completed with zero Bandit SAST issues and zero pip-audit CVEs.
-- **Work is halted at the Phase 1 Approval Gate awaiting explicit user approval to proceed to Phase 2.**
+- **Work is halted at the Phase 1 Approval Gate awaiting explicit user authorization to begin Phase 2 execution.**
 
 ---
 
@@ -197,7 +197,7 @@ pip-audit
 
 | Check / Tool | Actual Command Executed | Result / Output Summary | Status |
 | :--- | :--- | :--- | :--- |
-| **Pytest Suite** | `pytest` | **29 passed, 0 failed** in 1.38s across 7 test modules | **PASS** |
+| **Pytest Suite** | `pytest` | **30 passed, 0 failed** in 1.41s across 7 test modules | **PASS** |
 | **Ruff Linter** | `ruff check .` | **All checks passed** | **PASS** |
 | **Ruff Formatter** | `ruff format --check .` | **38 files already formatted** | **PASS** |
 | **Mypy Type Checker**| `mypy` | **Success: no issues found in 28 source files** (strict mode) | **PASS** |
@@ -208,17 +208,15 @@ pip-audit
 
 ---
 
-## 6. Remaining Risks & Approval Requirements
+## 6. Approvals Completed & Gate Status
 
-### Remaining Risks & Mitigations
-1. **Currency Migration Risk**: Modifying default currency from USD to INR in a system with existing data carries a risk of accidental data mutation if values are converted.
-   - *Mitigation*: Existing rows retain their stored numerical values without alteration. Only new accounts default to INR. Any future migration script explicitly leaves existing balances untouched.
-2. **Network Loopback Sockets in Sandboxed Environments**: On Windows, Starlette's `TestClient` uses `anyio` blocking portals that require loopback socket binding, which requires unsandboxed execution for automated tests.
-   - *Mitigation*: Documented in ADR-011 and `docs/HANDOFF.md` that integration tests running `TestClient` execute with standard loopback networking permissions.
+### Approved Remediation Actions Completed:
+1. [x] **Default Currency Corrected to INR (₹)**: Applied across models, Pydantic schemas, UI labels, formatting utilities, seed script, tests, and documentation.
+2. [x] **Financial Record Preservation**: Existing database records (`'Primary Checking'`, `1500.00`, `USD`) are preserved intact without automated conversion or relabeling. Previously applied migration `fba246fe5321` left unmodified.
+3. [x] **Authoritative Roadmap Formally Adopted**: Authoritative 9-phase lifecycle (**Phase 0 through Phase 8**) adopted in `docs/PHASES.md`, `README.md`, `docs/DECISIONS.md` (ADR-014), and `docs/CHANGELOG.md`.
+4. [x] **Protected Account Functionality Safeguarded**: Existing Account CRUD functionality preserved and defended by 15 dedicated regression tests.
 
-### Approval Requirements Before Phase 2 Kickoff
-Before starting Phase 2, the following user approvals are required:
-1. **Approval of Currency Remediation**: Approve applying the proposed defaults update (INR / ₹) across models, schemas, seed script, UI labels, and documentation.
-2. **Approval of Authoritative Roadmap**: Approve adopting the single authoritative 9-phase roadmap (Phases 0–8) and updating `docs/PHASES.md` accordingly.
-3. **Approval of Protected Functionality**: Approve retaining the existing Account CRUD functionality with its 15 regression tests.
-4. **Phase 2 Authorization**: Explicit user sign-off to begin Phase 2.
+### Gate Requirement:
+- **Phase 1 Remediation is COMPLETE**.
+- **Phase 2 functionality is NOT started.**
+- **Development is strictly HALTED awaiting explicit user instruction to begin Phase 2.**
