@@ -351,5 +351,28 @@
   - Users can export and preview imports safely without spreadsheet risks.
   - Backups can be verified without altering database state.
 
+---
+
+## ADR-020: Streamlit Frontend Architecture, Decoupled REST Integration, and In-Memory Session Management
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 5 requires implementing a responsive dark-themed personal finance frontend in Streamlit that consumes the Phase 4 REST API, enforces strict authentication barriers, preserves multi-currency integrity without cross-currency summation, and adheres to zero-trust architectural boundaries.
+- **Decision**:
+  1. **Strictly Decoupled Presentation Layer**: Streamlit views and components never import SQLAlchemy models or directly access SQLite database files. All operations execute through a centralized `ApiClient` communicating with authorized FastAPI endpoints (`/api/v1/*`) via Bearer JWT tokens.
+  2. **In-Memory Session Lifecycle Management**: JWT access tokens and user profile objects are stored strictly in Streamlit's server-side memory (`st.session_state`). Tokens are never persisted to disk, browser local storage, or URL query parameters.
+  3. **Automated Session Expiration Interception**: `ApiClient` intercepts HTTP 401 Unauthorized responses across all protected endpoints, immediately revokes the local token, marks `session_expired = True`, and redirects the operator to the login portal with a clear warning.
+  4. **Strict Currency Isolation**: The user interface sets Indian Rupee (INR) as default, renders USD accounts accurately ($), strictly prohibits summing disparate currencies into a combined total without an approved conversion mechanism, and excludes transfers from income and expense metrics.
+  5. **Explicit Confirmation on State Alterations**: Compensating transaction reversals and account archiving workflows enforce explicit operator confirmation prompts prior to dispatching API mutation requests.
+  6. **No Automatic POST Retries**: To prevent duplicate financial charges or ledger imbalances, `ApiClient` forbids automatic retries on state-mutating POST operations.
+- **Rationale**:
+  - Enforces separation of concerns and guarantees that all business, accounting, and security constraints are mediated by the FastAPI backend.
+  - Mitigates token leakage vulnerabilities and prevents cross-user authorization bypasses.
+  - Ensures accurate financial presentation conforming to accounting invariants.
+- **Consequences**:
+  - Frontend execution requires an active FastAPI backend process.
+  - Public password enrollment is strictly prohibited in the UI; legacy account enrollment remains restricted to the local administrative CLI.
+
+
 
 

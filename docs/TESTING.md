@@ -222,5 +222,29 @@ A development phase is marked complete ONLY when all gate criteria are met:
 - **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
 - **Database Record Preservation**: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` verified intact in `data/finance.db`.
 
+---
+
+## 10. Phase 5 Verification & Test Results (Streamlit Frontend Core UI)
+
+### 10.1 Test Execution Metrics
+- **Total Automated Tests**: 151 passed, 0 failed, 0 skipped (100% pass rate).
+- **Execution Time**: ~9.1 seconds.
+- **Overall Code Coverage**: 83% across `src/` (3,611 statements, 604 missed).
+- **Test Distribution (105 Unit, 46 Integration)**:
+  - **Phase 5 Frontend Unit Tests (19 tests)**:
+    - `tests/unit/test_frontend.py` (13 tests): ApiClient initialization, Bearer token injection, unreachable server error handling, OAuth2 login success and error handling, user profile retrieval, account CRUD (list, get, create, update, archive, reconcile), transaction operations (list, get, create, transfer, reverse), budget operations (period list, utilization, create), and monetary formatting across INR default, USD isolation, EUR/GBP/other symbols, and negative values.
+    - `tests/unit/test_frontend_views.py` (6 tests): Login view structure and session expiration alerts, Dashboard multi-currency isolation without cross-currency addition, Accounts directory tabs, Transactions view empty account handling, Budgets period utilization progress, and Settings profile & default currency preference rendering.
+  - **Protected Existing Tests (132 tests)**:
+    - All 132 Phase 1–4 regression tests (87 core service/repo tests, 33 FastAPI integration tests, and 14 administrative CLI tests) continue to pass with zero regressions.
+
+### 10.2 Static Quality & Security Audits
+- **Ruff Linter**: `ruff check .` -> **0 errors** (all checks passed).
+- **Ruff Formatter**: `ruff format --check .` -> **105 files correctly formatted**.
+- **Mypy Type Checking**: `mypy` -> **Success: no issues found in 67 source files** (strict mode).
+- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (8,077 lines scanned across `src/`).
+- **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
+- **Database Record Preservation**: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` verified intact in `data/finance.db`.
+
+
 
 

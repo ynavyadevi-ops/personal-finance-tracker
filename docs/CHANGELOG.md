@@ -9,12 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 5 (Streamlit Frontend Core UI & Core Pages)
-- Build responsive dark fintech UI shell in Streamlit with modern cards and navigation.
-- Implement Dashboard summary with net worth, income/expense cards, and quick actions.
-- Implement Accounts management page with creation, editing, balance reconciliation, and archiving.
-- Implement Transaction management page with multi-account filtering, manual entry forms, and transfer modals.
-- Implement Categories configuration page with color and icon pickers.
+### Planned for Phase 6 (Streamlit Advanced Feature Pages)
+- Implement Savings Goals milestone tracking, periodic contributions, and target fund progress bars.
+- Implement Loans & Liabilities management with amortization instalment views and debt paydown curves.
+- Implement Investment portfolio tracking with asset allocation, cost basis summaries, and dividend logs.
+- Implement Recurring transaction rule management with execution controls and scheduling status.
+
+---
+
+## [0.6.0] - 2026-11-15 (Phase 5: Streamlit Frontend Core UI & Core Pages)
+
+### Added
+- **Centralized Authenticated API Client (`src/frontend/api_client.py`)**:
+  - Implemented `ApiClient` wrapping `httpx.Client` with Bearer token injection, connection timeout handling, structured error tuple extraction, and automatic 401 session expiration handling.
+  - Strictly prevented automatic retries on state-mutating POST operations (financial transactions and transfers).
+  - Sanitized logging ensuring passwords, tokens, and credentials are never recorded in application logs.
+- **Dark Fintech Design System (`src/frontend/components/ui.py`)**:
+  - Designed premium dark palette (`#0B1120` background, `#151E30` surface, `#1D2940` elevated surface, `#38BDF8` accent, `#22C55E` positive, `#F87171` negative, `#F8FAFC` text, `#94A3B8` secondary text).
+  - Built custom CSS injection for containers, metric cards, input fields, and status badges (`render_badge`).
+  - Implemented decimal-safe currency display utility (`format_money`) enforcing Indian Rupee (`₹`) default, accurate USD (`$`) rendering, and strict prevention of cross-currency summation.
+- **Authentication Barrier & Navigation Shell (`src/frontend/app.py`, `src/frontend/views/login.py`)**:
+  - Enforced authentication gate redirecting unauthenticated users to a secure login portal consuming `POST /api/v1/auth/token`.
+  - In-memory session state management in `st.session_state` with automatic token revocation on logout.
+  - Built sidebar navigation controller with authenticated user identity badge, backend connection health probe, and access to Dashboard, Accounts, Transactions, Budgets, and Settings.
+- **Core Page 1 — Financial Overview Dashboard (`src/frontend/views/dashboard.py`)**:
+  - Total balances grouped strictly by currency (INR assets, USD assets) preventing combined summation without an exchange policy.
+  - Monthly cash flow cards (Income, Expense, Net Flow) strictly excluding inter-account transfers.
+  - Real-time active budget utilization progress bars with status badges (`NORMAL`, `WARNING`, `EXCEEDED`).
+  - Recent transactions table previewing latest activity.
+- **Core Page 2 — Accounts Management (`src/frontend/views/accounts.py`)**:
+  - Live accounts directory presenting account types, institutions, currencies, and reconciled current balances.
+  - In-place metadata editing form for account names and institutions via `PUT /api/v1/accounts/{id}`.
+  - Safe account archiving workflow with mandatory operator confirmation checkbox.
+  - New account registration form validating exact decimal opening balances.
+- **Core Page 3 — Transactions & Ledger (`src/frontend/views/transactions.py`)**:
+  - Queryable ledger with account, transaction type, and pagination filters.
+  - Income and expense recording form with decimal validation, description enforcement, and error display.
+  - Inter-account transfer form with proactive cross-currency mismatch warnings.
+  - Compensating transaction reversal modal with reason input and mandatory operator confirmation.
+- **Core Page 4 — Category Budgets (`src/frontend/views/budgets.py`)**:
+  - Monthly category budget overview with utilization percentages, remaining amounts, and overspending indicators.
+  - Interactive month and year period selector.
+  - Monthly budget allocation creation form with optional unspent rollover toggle.
+- **Core Page 5 — Settings & Profile (`src/frontend/views/settings.py`)**:
+  - Authenticated user profile presentation (Name, Email, User ID, Creation timestamp).
+  - Default core currency preference (`INR (₹)`) clearly highlighted.
+  - System runtime and security architecture specifications.
+  - One-click session termination and logout button.
+- **Automated Frontend Test Suite (`tests/unit/test_frontend.py`, `tests/unit/test_frontend_views.py`)**:
+  - Added 19 comprehensive unit tests covering API client methods, Bearer authorization, 401 error extraction, currency formatting across currencies, and view rendering.
+  - Total automated tests increased from 134 to 151 tests (100% pass rate in ~9.1s, 83% overall code coverage).
+  - Preserved existing database records `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` intact in `data/finance.db`.
 
 ---
 

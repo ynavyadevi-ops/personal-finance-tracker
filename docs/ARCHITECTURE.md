@@ -120,19 +120,19 @@ personal-expense-tracker/
 │   │   ├── investment.py
 │   │   └── portability.py        # Import/export/backup schemas
 │   └── frontend/                 # Streamlit User Interface
-│       ├── app.py                # Streamlit entry point (navigation, auth shell)
-│       ├── api_client.py         # HTTPX client communicating with FastAPI
-│       ├── state.py              # Session state helpers (user session, active tab)
-│       ├── components/           # Reusable UI widgets & Plotly charts
-│       │   ├── charts.py         # Plotly figure builders
-│       │   ├── forms.py          # Data entry forms
-│       │   └── tables.py         # Formatted data tables
-│       └── pages/                # Multi-page views
-│           ├── 1_Dashboard.py
-│           ├── 2_Accounts.py
-│           ├── 3_Transactions.py
-│           ├── 4_Budgets.py
-│           └── 5_Reports.py
+│       ├── app.py                # Streamlit entry point (navigation controller, auth barrier)
+│       ├── api_client.py         # HTTPX client communicating with FastAPI backend
+│       ├── components/           # Reusable UI widgets & design system
+│       │   ├── __init__.py
+│       │   └── ui.py             # Custom CSS, PALETTE tokens, format_money, render_header
+│       └── views/                # Modular view controllers
+│           ├── __init__.py
+│           ├── login.py          # Authentication portal & session establishment
+│           ├── dashboard.py      # Account overview, isolated currency balances, cash flow
+│           ├── accounts.py       # Account directory, metadata edit, archive with confirmation
+│           ├── transactions.py   # Ledger query, income/expense entry, transfers, reversals
+│           ├── budgets.py        # Monthly category caps, utilization progress bars, alerts
+│           └── settings.py       # Profile display, default currency (INR), system info, logout
 ├── alembic/                      # Database Schema Migrations
 │   ├── env.py
 │   ├── script.py.mako
@@ -151,11 +151,12 @@ personal-expense-tracker/
 
 ## 3. Frontend Architecture (Streamlit)
 
-### Multi-Page Reactive Structure
-- Streamlit serves as an interactive, reactive presentation layer.
-- **Entrypoint (`src/frontend/app.py`)**: Renders the application shell, authentication barrier, and sidebar navigation.
-- **Pages Directory (`src/frontend/pages/`)**: Modular pages for Accounts, Transactions, Budgets, and Analytics.
-- **Decoupled API Client (`src/frontend/api_client.py`)**: Streamlit components DO NOT interact directly with SQLAlchemy models or the database. All operations call the FastAPI backend via an asynchronous `httpx.AsyncClient` wrapper. This cleanly separates UI logic from data persistence and enforces identical security rules across any potential future client (mobile app, CLI).
+### Modular View Architecture
+- Streamlit serves as an interactive, reactive presentation layer consuming RESTful API endpoints.
+- **Entrypoint (`src/frontend/app.py`)**: Renders the application shell, enforces the authentication barrier, manages the sidebar navigation, and routes to modular views.
+- **Views Directory (`src/frontend/views/`)**: Modular view controllers for Login, Dashboard, Accounts, Transactions, Budgets, and Settings.
+- **Decoupled API Client (`src/frontend/api_client.py`)**: Streamlit components DO NOT interact directly with SQLAlchemy models or the database. All operations call the FastAPI backend via an `httpx.Client` wrapper using Bearer authentication tokens. This cleanly separates UI logic from data persistence and enforces identical security rules across any potential future client.
+- **Design System (`src/frontend/components/ui.py`)**: Centralized color tokens (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`, `#F8FAFC`, `#94A3B8`), responsive CSS styling, and currency display utilities (`format_money`) preventing cross-currency mixing.
 
 ### State Management & Caching
 - **Session State (`st.session_state`)**: Tracks current user credentials, active filters, form draft states, and notifications.

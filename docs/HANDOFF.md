@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED & REMEDIATED)
+> **CURRENT PHASE**: Phase 5 — Streamlit Frontend Core UI & Core Pages (COMPLETED & VERIFIED)
 
 ---
 
@@ -16,16 +16,21 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 1 (Environment Setup and Application Foundation)**: **COMPLETE & REMEDIATED**.
 - **Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)**: **COMPLETE & VERIFIED**.
 - **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
-- **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETED & REMEDIATED**.
-  - Authentication foundation (`src/core/security.py`, `src/api/routers/auth.py`): Argon2id password hashing via `pwdlib[argon2]`, signed short-lived JWT access tokens via `pyjwt` (`HS256`, 60-min expiration), OAuth2 login (`/api/v1/auth/token`), and user profile (`/api/v1/auth/me`).
-  - Migration `6c8ca07763d0`: Added nullable `hashed_password` to `users` table via `batch_alter_table`.
-  - Financial REST API Routers: All 10 domain routers implemented under `/api/v1/` mapping all domain services.
-  - Data Portability Pipeline: CSV/XLSX statement import wizard with duplicate detection, CSV/XLSX export with spreadsheet formula injection defense, and 11-table JSON user backup export with dry-run validation. Destructive restore is strictly non-executable.
-  - Security Remediation: Insecure public `POST /api/v1/auth/enroll` endpoint completely eliminated. Secure administrative CLI implemented in `src/cli/enroll.py` (`python -m src.cli.enroll --email <email>`) featuring masked password prompts via `getpass`, anti-overwrite protection, and atomic commits.
-  - 134 automated tests (88 unit tests, 46 integration tests) passing with 100% pass rate; 89% code coverage.
-  - Ruff (0 errors, 97 files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 6,867 lines), pip-audit (0 CVE vulnerabilities).
+- **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETE & VERIFIED**.
+- **Phase 5 (Streamlit Frontend Core UI & Core Pages)**: **COMPLETED & VERIFIED**.
+  - Built dark fintech UI shell (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`) consuming FastAPI backend REST endpoints.
+  - Implemented decoupled `ApiClient` (`src/frontend/api_client.py`) with Bearer token injection, structured error tuples, 401 session expiration handling, and prohibition of automated retries on state-mutating POST requests.
+  - In-memory session state management in `st.session_state` with authentication barrier routing unauthenticated visitors to a dedicated login portal.
+  - Implemented 5 modular core pages:
+    1. **Dashboard** (`src/frontend/views/dashboard.py`): Financial account overview, isolated currency totals (INR assets, USD assets without cross-currency mixing), monthly cash flow (strictly excluding transfers), recent transactions, and budget utilization progress.
+    2. **Accounts** (`src/frontend/views/accounts.py`): Live directory with reconciled balances, create account form, metadata editing, and account archiving with confirmation.
+    3. **Transactions** (`src/frontend/views/transactions.py`): Queryable ledger with pagination and filters, income and expense recording, balanced inter-account transfers with currency mismatch warnings, and transaction reversals with confirmation.
+    4. **Budgets** (`src/frontend/views/budgets.py`): Monthly category spending caps, utilization progress bars, remaining amounts, and overspending indicators.
+    5. **Settings** (`src/frontend/views/settings.py`): User profile presentation, INR core currency preference, runtime specifications, and session logout.
+  - Added 19 unit tests across `tests/unit/test_frontend.py` and `tests/unit/test_frontend_views.py`. Total automated test suite stands at **151 passed tests** (100% pass rate in ~9.1s, 83% overall test coverage).
+  - Ruff (0 errors, 105 files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 8,077 lines), pip-audit (0 CVE vulnerabilities).
   - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 4 Approval Gate. Phase 5 is NOT started.**
+- **Execution is halted at the Phase 5 Approval Gate. Phase 6 is NOT started.**
 
 ---
 
@@ -306,18 +311,39 @@ Phase 4 delivers the complete REST API interface, JWT authentication foundation,
      - `tests/unit/test_cli_enroll.py` (14 unit tests).
      - `tests/integration/test_auth_api.py` (updated to verify 404 on `/enroll` and OpenAPI schema absence).
 
-### 9.3 Phase 5 Implementation Readiness
-With Phase 4 security remediation complete, Phase 5 (Streamlit Frontend Core UI & Core Pages) is ready to begin upon explicit user authorization.
+### 9.3 Phase 4 Gate Transition
+Phase 4 and its security remediation were fully verified, committed, and approved.
 
-- **Phase 5 Scope**:
-  - Build responsive dark fintech UI shell in Streamlit with modern cards and navigation.
-  - Implement Dashboard summary with net worth, income/expense cards, and quick actions.
-  - Implement Accounts management page with creation, editing, balance reconciliation, and archiving.
-  - Implement Transaction management page with multi-account filtering, manual entry forms, and transfer modals.
-  - Implement Categories configuration page with color and icon pickers.
+---
+
+## 10. Phase 5 Architecture, Frontend Core UI & Phase 6 Readiness
+
+Phase 5 delivers the complete reactive Streamlit frontend application consuming FastAPI backend REST endpoints.
+
+### 10.1 Frontend Architecture & Component Structure
+- **Application Controller (`src/frontend/app.py`)**: Configures dark theme page layout, enforces the session authentication barrier, manages sidebar navigation, and routes between views.
+- **Decoupled API Client (`src/frontend/api_client.py`)**: Intermediates all HTTP communications with FastAPI using Bearer JWT authentication, structured error handling, 401 session expiration handling, and zero automatic retries on POST.
+- **Design System (`src/frontend/components/ui.py`)**: Implements the approved color tokens (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`), custom CSS styles, and currency display utilities.
+- **Modular Views (`src/frontend/views/`)**:
+  1. `login.py`: Authentication portal with masked password entry and error display.
+  2. `dashboard.py`: Accounts overview, isolated currency totals, monthly cash flow, and budget utilization cards.
+  3. `accounts.py`: Directory, create form, metadata edit expander, and archiving with confirmation.
+  4. `transactions.py`: Paginated ledger, income/expense entry form, inter-account transfers, and compensating reversals with confirmation.
+  5. `budgets.py`: Monthly category spending caps, utilization progress bars, remaining amounts, and overspending indicators.
+  6. `settings.py`: Profile data, default INR currency preference display, runtime architecture specs, and session logout.
+
+### 10.2 Phase 6 Implementation Readiness
+Phase 6 will build dedicated Streamlit user interfaces for advanced financial features implemented in the Phase 3 domain layer and Phase 4 API:
+
+- **Phase 6 Scope**:
+  - Savings Goals Page: Milestone target setting, progress bars, and contribution/withdrawal forms.
+  - Loans & Debt Page: Liability tracking, amortization schedules, and payment processing.
+  - Investments Page: Asset portfolio, holdings overview, and buy/sell/dividend trade entry.
+  - Recurring Transactions Page: Recurrence rule management, due schedules, and pause/resume controls.
 - **Gate Status**:
-  - Execution is **HALTED** at the Phase 4 completion gate.
-  - Awaiting user approval to proceed to Phase 5.
+  - Execution is **HALTED** at the Phase 5 completion gate.
+  - Awaiting user approval to proceed to Phase 6.
+
 
 
 

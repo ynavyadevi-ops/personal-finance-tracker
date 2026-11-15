@@ -185,7 +185,54 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
 
 - **Objective**: Build the core Streamlit user experience, polish the dark fintech interface, and implement the primary money management screens.
 - **Dependencies**: Phase 4 explicit approval.
-- **Status**: **PENDING AUTHORIZATION**.
+- **Status**: **COMPLETED & VERIFIED** (Phase gate active; awaiting explicit approval to begin Phase 6).
+- **Delivered Scope**:
+  - **Base Layout & Styling (`src/frontend/components/ui.py`)**:
+    - Premium dark fintech design system implementing exact color tokens (`#0B1120` background, `#151E30` surface, `#1D2940` elevated surface, `#38BDF8` primary accent, `#22C55E` positive, `#F87171` negative, `#F8FAFC` text, `#94A3B8` secondary text).
+    - Custom responsive CSS injection for containers, metric cards, badges, and input elements.
+    - Precision currency formatter (`format_money`) enforcing Indian Rupee (`₹`) default, accurate USD (`$`) rendering, and strict prevention of cross-currency summation.
+  - **Navigation Shell (`src/frontend/app.py`)**:
+    - Responsive sidebar with authenticated user identity badge, backend connection health indicator, and navigation controller routing to Dashboard, Accounts, Transactions, Budgets, and Settings.
+    - Interactive Logout action instantly clearing local session state and revoking client tokens.
+  - **Authentication Portal (`src/frontend/views/login.py`)**:
+    - Secure sign-in form consuming `POST /api/v1/auth/token` via OAuth2 password flow.
+    - Automatic redirection and session expiration alerts upon receiving 401 Unauthorized errors.
+    - Strict protection against credential leakage (passwords never stored in session state, tokens never displayed or passed in query parameters).
+  - **Centralized Authenticated API Client (`src/frontend/api_client.py`)**:
+    - Reusable `ApiClient` injecting Bearer token headers, standardizing `(success, data_or_error)` responses, handling timeouts, and strictly disallowing automatic retries on state-mutating POST operations.
+  - **Core Page 1 — Dashboard (`src/frontend/views/dashboard.py`)**:
+    - Consolidated financial overview grouping total balances strictly by currency without cross-currency mixing.
+    - Real-time monthly cash flow summary (Income vs. Expense) strictly excluding internal transfers.
+    - Active category budget utilization progress cards with dynamic threshold badges (`NORMAL`, `WARNING`, `EXCEEDED`).
+    - Recent transactions ledger table.
+  - **Core Page 2 — Accounts (`src/frontend/views/accounts.py`)**:
+    - Live accounts directory displaying type, institution, currency, and reconciled current balances.
+    - In-place metadata editing form (Name, Institution Name) via `PUT /api/v1/accounts/{id}`.
+    - Account archiving workflow with mandatory operator confirmation checkbox.
+    - New account registration form validating exact decimal opening balances.
+  - **Core Page 3 — Transactions (`src/frontend/views/transactions.py`)**:
+    - Filterable and paginated ledger view with account, type, and pagination controls.
+    - Income and expense recording form with decimal validation and backend error display.
+    - Balanced inter-account transfer execution form with proactive currency mismatch prevention.
+    - Compensating transaction reversal modal with mandatory reason prompt and confirmation.
+  - **Core Page 4 — Budgets (`src/frontend/views/budgets.py`)**:
+    - Monthly category budget overview with utilization progress bars and overspending indicators.
+    - Year and month selectors updating real-time consumption metrics.
+    - Budget allocation creation form supporting optional rollover carryover.
+  - **Core Page 5 — Settings (`src/frontend/views/settings.py`)**:
+    - Authenticated user profile presentation (Name, Email, User ID, Creation timestamp).
+    - Default currency preference (`INR (₹)`) clearly highlighted.
+    - System runtime and security architecture specifications.
+    - Single-click session termination and logout.
+- **Verification & Tests**:
+  - 151 automated tests passing (105 unit tests, 46 integration tests, 100% pass rate in ~9.1s).
+  - Code Coverage: 83% overall across `src/`.
+  - Ruff: 0 lint errors, 105 files correctly formatted.
+  - Mypy: 0 type issues across 67 source files in strict mode.
+  - Bandit: 0 security issues across 8,077 lines of code.
+  - pip-audit: 0 known vulnerabilities.
+  - Preserved existing database records `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` intact in `data/finance.db`.
+- **Approval Gate**: Stopped at Phase 5 completion gate. Explicit user approval required to proceed to Phase 6.
 
 ---
 

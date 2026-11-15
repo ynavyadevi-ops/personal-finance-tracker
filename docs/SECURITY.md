@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/SECURITY.md`  
 > **STATUS**: ENFORCED & ACTIVE  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Pydantic v2, Bandit, pip-audit)  
-> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED)
+> **CURRENT PHASE**: Phase 5 — Streamlit Frontend Core UI & Core Pages (COMPLETED)
 
 ---
 
@@ -229,24 +229,57 @@ The Phase 3 domain service layer implements defense-in-depth security policies:
 
 ---
 
-## 11. Security Audit & SAST Verification Results (Phase 4 Security Remediation)
+## 12. Phase 5 Frontend Security & Session Defenses
 
-### 11.1 Static Application Security Testing (Bandit)
+The Phase 5 Streamlit frontend architecture enforces multi-layered UI security defenses:
+
+1. **Strict In-Memory Session Storage (`st.session_state`)**:
+   - Authentication tokens (`access_token`) and user profiles are stored exclusively in Streamlit's volatile server-side memory (`st.session_state`).
+   - Tokens and credentials are never persisted to local storage, cookies, browser disk caches, or URL query parameters.
+   - Plaintext passwords submitted during login are never saved to session state or cached in memory.
+
+2. **Authentication Barrier & Automated Redirection**:
+   - `src/frontend/app.py` enforces a mandatory authentication gate before rendering any navigation options or financial views.
+   - Unauthenticated callers are immediately trapped in `render_login_view()`, with execution halted via `st.stop()`.
+
+3. **Session Expiration & 401 Interception**:
+   - All backend API interactions pass through the centralized `ApiClient`.
+   - Any response carrying an HTTP 401 Unauthorized status automatically clears `access_token`, marks `session_expired = True`, and redirects the operator to the login portal with a clear warning notice.
+
+4. **Zero Credential Leakage in Logging & UI**:
+   - `ApiClient` constructs Bearer token headers programmatically without logging request payloads or tokens.
+   - User interfaces strictly mask password inputs with `type="password"`.
+   - Logging configurations filter out authorization headers and token payloads.
+
+5. **Decoupled API Execution**:
+   - Frontend views and widgets are completely decoupled from SQLAlchemy ORM models and SQLite database files.
+   - All data fetching and mutations strictly execute through authorized FastAPI REST endpoints (`/api/v1/*`), ensuring that tenant isolation, double-entry mathematical balancing, and check constraints cannot be bypassed from the UI layer.
+
+6. **Currency Display Separation**:
+   - The UI enforces strict isolation of monetary amounts by currency (`format_money`).
+   - Indian Rupee (INR) is enforced as the core default currency, while USD accounts are rendered accurately with the `$` symbol without silent conversion or unapproved summation.
+
+---
+
+## 13. Security Audit & SAST Verification Results (Phase 5 Core UI)
+
+### 13.1 Static Application Security Testing (Bandit)
 - **Tool**: Bandit v1.8.6 on Python 3.12.13
 - **Command**: `bandit -r src/`
-- **Scope**: 6,867 lines of application code across `src/` (including CLI, routers, services, repositories)
+- **Scope**: 8,077 lines of application code across `src/` (including frontend views, components, API client, routers, services, repositories)
 - **Result**: **0 Issues Identified** (Zero High, Medium, Low, or Undefined issues)
 - **Verified Mitigations**:
-  - Zero hardcoded passwords or secrets (`B105`, `B106`, `B107` checks passed).
-  - Zero SQL string formatting (`B608` passed; 100% SQLAlchemy parameterized statements).
+  - Zero hardcoded secrets (`B105`, `B106`, `B107` checks passed).
+  - Zero SQL string formatting (`B608` passed).
   - Zero insecure deserialization or pickle usage (`B301`, `B403` passed).
-  - Zero silent exception suppression (`B110`, `B112` passed).
+  - Zero silent exception suppression (`B110`, `B112` passed; exception handling in `ApiClient` logs debug details).
 
-### 11.2 Dependency Supply-Chain Audit (pip-audit)
+### 13.2 Dependency Supply-Chain Audit (pip-audit)
 - **Tool**: pip-audit v2.8.0
 - **Database**: PyPI Vulnerability Database & PyPA Advisory DB
 - **Scope**: All locked production and development dependencies
 - **Result**: **0 Known Vulnerabilities Found**
+
 
 
 

@@ -1,9 +1,19 @@
 """Streamlit UI components package."""
 
 from src.frontend.components.ui import (
+    PALETTE,
     apply_custom_css,
+    format_money,
+    render_badge,
+    render_empty_state,
     render_header,
-    render_phase_placeholder,
 )
 
-__all__ = ["apply_custom_css", "render_header", "render_phase_placeholder"]
+__all__ = [
+    "PALETTE",
+    "apply_custom_css",
+    "format_money",
+    "render_badge",
+    "render_empty_state",
+    "render_header",
+]
