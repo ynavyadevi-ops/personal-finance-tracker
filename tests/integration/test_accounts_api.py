@@ -100,3 +100,34 @@ def test_validation_error_on_empty_name(client: TestClient) -> None:
     response = client.post("/api/v1/accounts", json={"name": "", "account_type": "CHECKING"})
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_create_account_zero_balance(client: TestClient) -> None:
+    """Verify account creation with zero balance is valid."""
+    res = client.post(
+        "/api/v1/accounts",
+        json={
+            "name": "Zero Balance Cash",
+            "account_type": "CASH",
+            "opening_balance": "0.00",
+            "currency": "INR",
+        },
+    )
+    assert res.status_code == 201
+    assert res.json()["data"]["opening_balance"] == "0.00"
+    assert res.json()["data"]["currency"] == "INR"
+
+
+def test_list_accounts_includes_archived_when_requested(client: TestClient) -> None:
+    """Verify active_only=false returns both active and archived accounts."""
+    create_res = client.post(
+        "/api/v1/accounts",
+        json={"name": "Will Archive", "account_type": "SAVINGS", "opening_balance": "100.00"},
+    )
+    acc_id = create_res.json()["data"]["id"]
+    client.delete(f"/api/v1/accounts/{acc_id}")
+
+    res_all = client.get("/api/v1/accounts?active_only=false")
+    assert res_all.status_code == 200
+    ids = [acc["id"] for acc in res_all.json()["data"]]
+    assert acc_id in ids

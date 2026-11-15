@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 1 — Environment and Application Foundation (COMPLETED)
+> **CURRENT PHASE**: Phase 1 Remediation & Review (AWAITING PHASE 2 APPROVAL)
 
 ---
 
@@ -12,20 +12,96 @@
 This repository houses the **Personal Finance Tracker**, a production-oriented, secure, full-stack personal finance application implemented in **Python + SQL**.
 
 ### Current State
-- **Phase 0 (Project Foundation and Documentation)** is **COMPLETE**.
-- **Phase 1 (Environment and Application Foundation)** is **COMPLETE**.
+- **Phase 0 (Project Foundation and Documentation)**: **COMPLETE**.
+- **Phase 1 (Environment and Application Foundation)**: **COMPLETE & REMEDIATED**.
   - Isolated Python 3.12.13 virtual environment established with locked dependencies (`requirements.lock`).
   - Modular FastAPI backend implemented with health checks and initial financial accounts REST endpoints.
   - SQLite database persistence configured with SQLAlchemy 2.0 and Alembic migrations (`fba246fe5321`).
   - Streamlit frontend application built with a dark fintech UI and decoupled HTTP API communication.
-  - Complete automated testing suite passing (21/21 tests, 100% pass rate).
-  - Strict type checking (Mypy) and linting/formatting (Ruff) passing with zero errors.
+  - 29 automated tests (18 unit tests, 11 API integration tests) passing with 100% pass rate.
+  - Strict type checking (Mypy) and linting/formatting (Ruff) passing with zero errors across all source files.
   - Security audit completed with zero Bandit SAST issues and zero pip-audit CVEs.
-- **Work is halted at the Phase 1 Completion Gate awaiting explicit user approval to proceed to Phase 2.**
+- **Work is halted at the Phase 1 Approval Gate awaiting explicit user approval to proceed to Phase 2.**
 
 ---
 
-## 2. Instructions for Successor Developers & AI Agents
+## 2. Phase 1 Remediation Review Findings & Action Plans
+
+### Finding 1: Default Currency Alignment (INR vs USD)
+- **Review Finding**: The approved project currency is **INR (₹)**, whereas the initial scaffolding and documentation defaulted to **USD ($)**.
+- **System-Wide Reference Inventory**:
+  1. *SQLAlchemy Models* (`src/db/models/account.py`): `currency: Mapped[str] = mapped_column(String(3), default="USD")`.
+  2. *Pydantic Schemas* (`src/schemas/account.py`): `currency: str = Field(default="USD", ...)`.
+  3. *Database Seed* (`src/db/seed.py`): Initial checking account seeded with `currency="USD"`.
+  4. *Monetary Formatting* (`src/core/money.py`): `format_currency(..., currency_symbol="$")`.
+  5. *Streamlit Frontend* (`src/frontend/app.py`): Label `Opening Balance ($)` and text input default `"USD"`.
+  6. *Alembic Migrations* (`alembic/versions/fba246fe5321_*.py`): Created column `currency String(3)` without server-level default.
+  7. *Documentation* (`docs/ARCHITECTURE.md`, `docs/SPEC.md`, `docs/DEVELOPMENT_RULES.md`): References to `USD` / `$`.
+- **Proposed Safe Correction Plan**:
+  1. *Preserve Existing Financial Records*: In accordance with financial ledger integrity, the existing local database row (`'Primary Checking'`, `1500.00`) is preserved without silent numerical conversion. No exchange-rate multiplication or data mutation will be performed.
+  2. *Applied Migration Immutability*: The existing migration `fba246fe5321` is never modified in place.
+  3. *New Safe Migration*: If server-level column defaults or data migrations are approved, author a new forward migration (`alembic revision -m "set_default_currency_inr"`).
+  4. *Application Defaults Correction*: Update Python-level defaults in `src/db/models/account.py`, `src/schemas/account.py`, `src/core/money.py` (default `currency_symbol="₹"`), `src/frontend/app.py` (`Opening Balance (₹)`, default `"INR"`), and `src/db/seed.py` (`currency="INR"`).
+  5. *Documentation & Test Alignment*: Update documentation and test assertions to reflect `INR` and `₹`.
+
+---
+
+### Finding 2: Authoritative Roadmap Reconciliation (Phases 0–8)
+- **Review Finding**: The generated documentation referenced 10 phases labeled 0–9, whereas the original approved roadmap comprised **Phases 0–8** (9 sequential phases total).
+- **Required Inclusions**: The roadmap must explicitly assign ownership of:
+  - Recurring transactions (scheduled bills, automated rule queues).
+  - Savings goals (target amounts, milestone dates, allocation tracking).
+  - Loans & debts (liability tracking, interest calculations, payoff schedules).
+  - Investments (portfolio holdings, asset types, cost basis, valuation).
+  - AI financial insights (spending trend analysis, assisted categorization with explicit user consent).
+- **Proposed Single Authoritative Roadmap (Phases 0–8)**:
+  - **Phase 0: Project Foundation and Documentation** *(Completed)*
+  - **Phase 1: Environment Setup, Python Tooling & Core Project Scaffolding** *(Completed)*
+  - **Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations** *(Next Phase)*
+    - Comprehensive data models: `User`, `FinancialAccount`, `Category`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebtSchedule`, `RecurringRule`, `AuditLog`.
+  - **Phase 3: Core Accounting Engine, Financial Services & Domain Logic**
+    - Double-entry balance calculation, atomic transfer transactions, Decimal precision.
+    - Recurring transaction rule queue engine.
+    - Savings goal progress calculators & loan amortization payoff math.
+  - **Phase 4: FastAPI REST API & Data Portability Services**
+    - REST endpoints for Accounts, Transactions, Budgets, Goals, Loans, Investments, Recurring Rules.
+    - Bank statement CSV/Excel import pipeline (Pandas parsing, deduplication, column mapping) & RFC 4180 export.
+  - **Phase 5: Streamlit Frontend Core UI & Core Pages**
+    - App shell, dark fintech styling, navigation state.
+    - Core pages: Dashboard metrics, Accounts (protected CRUD), Transaction Ledger (Income/Expense/Transfer), Budgets.
+  - **Phase 6: Advanced Feature Pages & Tracking**
+    - Savings Goals tracking page.
+    - Loans & Debt payoff calculator page.
+    - Investment portfolio tracking page.
+    - Recurring rules management page.
+  - **Phase 7: Analytics, Plotly Visualizations & AI Insights**
+    - Interactive Plotly analytics: Cash flow comparisons, category expense donuts, net worth trajectory.
+    - AI financial insights (rule-based spending trends, optional AI categorization with explicit user consent).
+  - **Phase 8: Comprehensive Verification, Security Auditing & Production Readiness**
+    - Complete Pytest and HTTPX test suite (>85% coverage).
+    - Security audits: Bandit SAST scan, `pip-audit` CVE verification, OWASP compliance verification.
+    - PostgreSQL migration verification (`verify_pg_migration.py`), Dockerization, and production release deployment.
+
+---
+
+### Finding 3: Existing Account Functionality (Designated Protected Status)
+- **Review Finding**: Account CRUD endpoints, service layer, and UI forms were scaffolded in Phase 1 ahead of the original Phase 2/4/6 schedule.
+- **Mandate**: In accordance with user directives, this functionality **MUST NOT** be removed, rewritten, or discarded.
+- **Protected Components**:
+  - `src/db/models/account.py`: `FinancialAccount` entity model and `AccountType` enum.
+  - `src/repositories/account_repo.py`: `AccountRepository` with query isolation.
+  - `src/services/account_service.py`: `AccountService` enforcing unique account names, decimal opening balances, and soft-delete archiving.
+  - `src/api/routers/accounts.py`: Endpoints `GET /api/v1/accounts`, `POST /api/v1/accounts`, `GET /api/v1/accounts/{id}`, `PATCH /api/v1/accounts/{id}`, `DELETE /api/v1/accounts/{id}`.
+  - `src/frontend/app.py`: Accounts page tab with active account cards, balance display, and new account registration form.
+  - `src/frontend/api_client.py`: HTTP client functions for listing, creating, and archiving accounts.
+- **Regression Protection Suite**:
+  - Authored `tests/unit/test_account_service.py` containing 6 unit regression tests verifying creation, duplicate conflicts, not-found handling, multi-tenant isolation, updating, and archiving.
+  - Added integration regression tests in `tests/integration/test_accounts_api.py` verifying zero-balance accounts, archived account inclusion, and explicit currency handling.
+  - Total account test coverage: 15 dedicated regression tests guaranteeing zero functional degradation.
+
+---
+
+## 3. Instructions for Successor Developers & AI Agents
 
 When resuming or continuing work on this repository:
 
@@ -42,14 +118,10 @@ When resuming or continuing work on this repository:
 
 ---
 
-## 3. Developer & Environment Command Cheatsheet
+## 4. Developer & Environment Command Cheatsheet
 
-Once Phase 1 is authorized, the following standard commands govern development:
-
-### Environment Setup & Package Management (Phase 1+)
+### Environment Setup & Package Management
 ```bash
-# Create virtual environment (using uv or venv)
-uv venv .venv
 # Activate on Windows:
 .venv\Scripts\activate
 # Activate on Unix/macOS:
@@ -68,10 +140,10 @@ ruff format .
 ruff check . --fix
 
 # Static type check using Mypy in strict mode
-mypy --strict src
+mypy
 ```
 
-### Database & Migrations (Phase 2+)
+### Database & Migrations
 ```bash
 # Generate a new Alembic migration revision
 alembic revision --autogenerate -m "describe_migration"
@@ -86,7 +158,7 @@ alembic downgrade -1
 python -m src.db.seed
 ```
 
-### Running the Application (Phase 4 & 5+)
+### Running the Application
 ```bash
 # Terminal 1: Launch FastAPI backend server (Port 8000)
 uvicorn src.api.main:app --reload --port 8000
@@ -95,13 +167,13 @@ uvicorn src.api.main:app --reload --port 8000
 streamlit run src/frontend/app.py --server.port 8501
 ```
 
-### Automated Testing (Phase 3+)
+### Automated Testing
 ```bash
 # Run all Pytest suites
 pytest
 
-# Run with verbose output and coverage
-pytest -v --cov=src --cov-report=term-missing
+# Run with verbose output
+pytest -v
 
 # Run only unit tests
 pytest tests/unit/
@@ -121,36 +193,32 @@ pip-audit
 
 ---
 
-## 4. Phase 0 Verification Checklist
+## 5. Actual Verification Results
 
-Before accepting Phase 0 completion, verify the following baseline criteria:
-
-- [x] Repository initialized with Git version control.
-- [x] Python-centric `.gitignore` in place (ignoring `.venv`, `__pycache__`, `*.db`, `.env*`).
-- [x] `AGENTS.md` established with mandatory directives.
-- [x] `README.md` updated with Python + SQL stack details and verified versions.
-- [x] `docs/APP.md` authored with product vision, personas, and feature taxonomy.
-- [x] `docs/SPEC.md` authored with 20 FRs, 10 NFRs, workflows, and acceptance criteria.
-- [x] `docs/ARCHITECTURE.md` authored with Streamlit, FastAPI, SQLAlchemy 2.0, and Postgres migration details.
-- [x] `docs/SECURITY.md` authored with OWASP mitigations, Bandit SAST, and pip-audit policies.
-- [x] `docs/TESTING.md` authored with Pytest, HTTPX, and testing pyramid.
-- [x] `docs/DEVELOPMENT_RULES.md` authored with PEP 8, Decimal math rules, and layer boundaries.
-- [x] `docs/PHASES.md` authored with detailed scope, deliverables, tests, and gates for all 9 phases.
-- [x] `docs/CHANGELOG.md` updated with Phase 0 initial release entry.
-- [x] `docs/DECISIONS.md` authored with ADR-001 through ADR-010.
-- [x] `docs/HANDOFF.md` authored with operational instructions and cheatsheet.
-- [x] **Zero application code or dependencies installed.**
-- [x] Clean Git working tree with all documentation committed.
+| Check / Tool | Actual Command Executed | Result / Output Summary | Status |
+| :--- | :--- | :--- | :--- |
+| **Pytest Suite** | `pytest` | **29 passed, 0 failed** in 1.38s across 7 test modules | **PASS** |
+| **Ruff Linter** | `ruff check .` | **All checks passed** | **PASS** |
+| **Ruff Formatter** | `ruff format --check .` | **38 files already formatted** | **PASS** |
+| **Mypy Type Checker**| `mypy` | **Success: no issues found in 28 source files** (strict mode) | **PASS** |
+| **Bandit SAST** | `bandit -r src/` | **0 issues identified** across 1,381 LOC (Zero High/Med/Low) | **PASS** |
+| **pip-audit** | `pip-audit` | **No known vulnerabilities found** across all 96 dependencies | **PASS** |
+| **FastAPI Startup** | In-process uvicorn server startup probe | **HTTP 200 OK** on `/health` (`status: healthy`, `database_connected: True`) | **PASS** |
+| **Streamlit Startup**| `AppTest.from_file("src/frontend/app.py").run()` | **Success: True**, clean execution with zero unhandled exceptions | **PASS** |
 
 ---
 
-## 5. Next Steps (Upon Phase 1 Approval)
+## 6. Remaining Risks & Approval Requirements
 
-When the user grants explicit approval to proceed to Phase 1:
-1. Initialize `pyproject.toml` with the pinned, verified dependencies.
-2. Create and activate a Python 3.12 virtual environment (`uv venv .venv`).
-3. Configure `ruff.toml`, `mypy.ini`, and `pytest.ini`.
-4. Create the core directory structure (`src/`, `tests/`).
-5. Establish `.env.example` and Pydantic `BaseSettings` loader.
-6. Verify empty Pytest discovery, Bandit scan, and `pip-audit` scan.
-7. Halt and deliver Phase 1 completion report.
+### Remaining Risks & Mitigations
+1. **Currency Migration Risk**: Modifying default currency from USD to INR in a system with existing data carries a risk of accidental data mutation if values are converted.
+   - *Mitigation*: Existing rows retain their stored numerical values without alteration. Only new accounts default to INR. Any future migration script explicitly leaves existing balances untouched.
+2. **Network Loopback Sockets in Sandboxed Environments**: On Windows, Starlette's `TestClient` uses `anyio` blocking portals that require loopback socket binding, which requires unsandboxed execution for automated tests.
+   - *Mitigation*: Documented in ADR-011 and `docs/HANDOFF.md` that integration tests running `TestClient` execute with standard loopback networking permissions.
+
+### Approval Requirements Before Phase 2 Kickoff
+Before starting Phase 2, the following user approvals are required:
+1. **Approval of Currency Remediation**: Approve applying the proposed defaults update (INR / ₹) across models, schemas, seed script, UI labels, and documentation.
+2. **Approval of Authoritative Roadmap**: Approve adopting the single authoritative 9-phase roadmap (Phases 0–8) and updating `docs/PHASES.md` accordingly.
+3. **Approval of Protected Functionality**: Approve retaining the existing Account CRUD functionality with its 15 regression tests.
+4. **Phase 2 Authorization**: Explicit user sign-off to begin Phase 2.
