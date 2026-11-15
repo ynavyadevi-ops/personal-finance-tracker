@@ -154,7 +154,7 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
   - **Authentication & Security Foundation (`src/core/security.py`, `src/api/routers/auth.py`)**:
     - Argon2id password hashing via `pwdlib[argon2]`.
     - Short-lived signed JWT access tokens via `pyjwt` with UTC expiration, issuer validation, and signature verification.
-    - Password enrollment endpoint (`/api/v1/auth/enroll`) ensuring legacy unauthenticated accounts are preserved without silent password allocation.
+    - Secure administrative CLI (`src/cli/enroll.py`) ensuring legacy unauthenticated accounts can enroll initial passwords locally with anti-overwrite protection without public endpoint exposure.
     - OAuth2 password form login (`/api/v1/auth/token`) and profile retrieval (`/api/v1/auth/me`).
     - Server-side tenant extraction (`get_current_user`, `get_current_user_id`), never trusting client-supplied identity.
   - **Financial REST API Endpoints (`src/api/routers/`)**:

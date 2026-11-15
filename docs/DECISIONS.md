@@ -321,15 +321,15 @@
 - **Decision**:
   1. **Password Hashing with Argon2id**: Use `pwdlib[argon2]` with cryptographic salt to hash and verify passwords. Never store plaintext passwords or use fast general-purpose hashes (e.g. SHA-256).
   2. **Short-Lived Signed JWT Access Tokens**: Issue signed HS256 JWT tokens via `pyjwt` with explicit expiration (60 minutes UTC), issued-at (`iat`), token classification (`type="access"`), and issuer (`iss="personal-finance-tracker"`). Never store secrets or sensitive credentials in token payloads.
-  3. **Safe Legacy Account Enrollment**: Add `hashed_password` (nullable) to the `users` table via Alembic migration `6c8ca07763d0`. Legacy accounts without passwords cannot authenticate until safe password enrollment (`/api/v1/auth/enroll`) is completed.
+  3. **Safe Legacy Account Enrollment via Administrative CLI**: Add `hashed_password` (nullable) to the `users` table via Alembic migration `6c8ca07763d0`. Legacy accounts without passwords cannot authenticate until safe password enrollment is completed via local administrative CLI (`src/cli/enroll.py`). The public `/api/v1/auth/enroll` HTTP endpoint was eliminated to prevent unauthenticated account claiming.
   4. **Server-Side Identity Derivation**: All financial API operations derive user ownership strictly from the verified server-side identity context (`current_user: User = Depends(get_current_user)`). Client-supplied `user_id` query/body parameters are strictly rejected.
 - **Rationale**:
   - Argon2id is the OWASP-recommended password hashing standard resistant to GPU/ASIC cracking.
   - Server-side identity injection prevents broken object level authorization (BOLA / IDOR) vulnerabilities.
-  - Safe enrollment satisfies Directive 3 by preserving existing user and account records without creating unauthenticated security holes.
+  - Administrative CLI enrollment satisfies Directive 3 by preserving existing user and account records while enforcing operator verification and anti-overwrite protection on the host.
 - **Consequences**:
   - All financial endpoints require valid Bearer JWT tokens in `Authorization` header.
-  - Public endpoints are limited strictly to `/health`, `/api/v1/health`, `/api/v1/auth/register`, `/api/v1/auth/token`, and `/api/v1/auth/enroll`.
+  - Public endpoints are limited strictly to `/health`, `/api/v1/health`, `/api/v1/auth/register`, and `/api/v1/auth/token`.
 
 ---
 

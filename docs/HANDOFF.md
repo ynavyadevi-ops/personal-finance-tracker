@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (FINAL SECURITY REVIEW — AWAITING REMEDIATION APPROVAL)
+> **CURRENT PHASE**: Phase 4 — FastAPI REST API & Data Portability Services (COMPLETED & REMEDIATED)
 
 ---
 
@@ -16,15 +16,14 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 1 (Environment Setup and Application Foundation)**: **COMPLETE & REMEDIATED**.
 - **Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)**: **COMPLETE & VERIFIED**.
 - **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
-- **Phase 4 (FastAPI REST API & Data Portability Services)**: **IMPLEMENTED & AUDITED**.
+- **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETED & REMEDIATED**.
   - Authentication foundation (`src/core/security.py`, `src/api/routers/auth.py`): Argon2id password hashing via `pwdlib[argon2]`, signed short-lived JWT access tokens via `pyjwt` (`HS256`, 60-min expiration), OAuth2 login (`/api/v1/auth/token`), and user profile (`/api/v1/auth/me`).
   - Migration `6c8ca07763d0`: Added nullable `hashed_password` to `users` table via `batch_alter_table`.
   - Financial REST API Routers: All 10 domain routers implemented under `/api/v1/` mapping all domain services.
   - Data Portability Pipeline: CSV/XLSX statement import wizard with duplicate detection, CSV/XLSX export with spreadsheet formula injection defense, and 11-table JSON user backup export with dry-run validation. Destructive restore is strictly non-executable.
-  - Security Review Finding: `POST /api/v1/auth/enroll` was confirmed vulnerable to unauthenticated account claiming using only an email address. Remediation proposal: replace public HTTP endpoint with an administrative local CLI workflow (`python -m src.cli.enroll`).
-  - Phase 5 Readiness: **BLOCKED** pending user authorization of the `/enroll` remediation.
-  - 119 automated tests (74 unit tests, 45 integration tests) passing with 100% pass rate; 89% code coverage.
-  - Ruff (0 errors, all files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 6,770 lines), pip-audit (0 CVE vulnerabilities).
+  - Security Remediation: Insecure public `POST /api/v1/auth/enroll` endpoint completely eliminated. Secure administrative CLI implemented in `src/cli/enroll.py` (`python -m src.cli.enroll --email <email>`) featuring masked password prompts via `getpass`, anti-overwrite protection, and atomic commits.
+  - 134 automated tests (88 unit tests, 46 integration tests) passing with 100% pass rate; 89% code coverage.
+  - Ruff (0 errors, 97 files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 6,867 lines), pip-audit (0 CVE vulnerabilities).
   - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
 - **Execution is halted at the Phase 4 Approval Gate. Phase 5 is NOT started.**
 
@@ -266,13 +265,59 @@ Phase 3 delivers the complete business logic layer governing transactions, accou
    - Calculates gross proceeds, net proceeds after fees, cost of sold units, and realized capital gains/losses.
    - Records dividend income without altering held unit counts.
 
-### 8.2 Phase 4 Implementation Readiness
+### 8.2 Phase 3 Gate Transition
+Phase 3 was completed, approved, and handed off with all 87 tests passing and zero blockers.
 
-Phase 4 will expose all completed domain services through RESTful FastAPI endpoints (`/api/v1/*`), build the Pandas bank statement CSV/Excel import wizard, and implement RFC 4180 export utilities.
+---
 
-- **Prerequisites for Phase 4**:
-  - Explicit human sign-off approving Phase 3 completion.
-  - Retain all 87 automated unit and integration tests.
-  - Maintain zero CVEs and clean static analysis scores.
+## 9. Phase 4 Architecture & Security Remediation Summary
+
+Phase 4 delivers the complete REST API interface, JWT authentication foundation, and data portability pipeline.
+
+### 9.1 Delivered REST Routers & Domain Endpoints
+- `src/api/routers/auth.py`: Registration (`POST /register`), OAuth2 form login (`POST /token`), profile lookup (`GET /me`).
+- `src/api/routers/accounts.py`: Account listing and detail.
+- `src/api/routers/transactions.py`: Income, expense, inter-account transfer, reversal, and balance reconciliation.
+- `src/api/routers/budgets.py`: Category budget allocations and utilization metrics.
+- `src/api/routers/goals.py`: Savings milestone targets, contributions, withdrawals, and progress tracking.
+- `src/api/routers/loans.py`: Loan debt tracking, fixed-rate amortization schedules, and payments.
+- `src/api/routers/investments.py`: Security buy/sell trades with weighted-average cost basis and dividends.
+- `src/api/routers/recurring.py`: Recurrence rules, execution scheduling, and pause/resume.
+- `src/api/routers/data_portability.py`: Statement import dry-run preview and batch commit, CSV/XLSX transaction export, user data JSON backup snapshot, and dry-run backup validation.
+- `src/api/routers/health.py`: Health and readiness probe.
+
+### 9.2 Security Remediation: Administrative CLI for Legacy User Enrollment
+- **Vulnerability Identified**: The initial `POST /api/v1/auth/enroll` endpoint allowed any unauthenticated caller to set a password for existing accounts using only their email address.
+- **Remediation Executed**:
+  1. Completely removed `POST /api/v1/auth/enroll` from `src/api/routers/auth.py`.
+  2. Removed `UserEnrollPassword` schema from `src/schemas/user.py` and `src/schemas/__init__.py`.
+  3. Verified endpoint absence from FastAPI route registration and OpenAPI schema (`/openapi.json`).
+  4. Implemented `src/cli/enroll.py` (`python -m src.cli.enroll --email <email>`):
+     - Executed locally from an administrative terminal on the host.
+     - Verifies user exists in the database prior to prompting for passwords.
+     - **Anti-Overwrite Protection**: Accounts with existing password hashes cannot be re-enrolled or overwritten.
+     - Interactive masked password prompt with confirmation (`getpass.getpass`).
+     - Command-line arguments for passwords (`--password`) are strictly forbidden.
+     - Enforces password complexity constraints (8–128 characters).
+     - Prompts explicit operator confirmation (`[y/N]`) before database write.
+     - Commits atomically with rollback on error.
+     - Zero credential or hash leakage to stdout, stderr, or shell history.
+  5. Implemented comprehensive test suites:
+     - `tests/unit/test_cli_enroll.py` (14 unit tests).
+     - `tests/integration/test_auth_api.py` (updated to verify 404 on `/enroll` and OpenAPI schema absence).
+
+### 9.3 Phase 5 Implementation Readiness
+With Phase 4 security remediation complete, Phase 5 (Streamlit Frontend Core UI & Core Pages) is ready to begin upon explicit user authorization.
+
+- **Phase 5 Scope**:
+  - Build responsive dark fintech UI shell in Streamlit with modern cards and navigation.
+  - Implement Dashboard summary with net worth, income/expense cards, and quick actions.
+  - Implement Accounts management page with creation, editing, balance reconciliation, and archiving.
+  - Implement Transaction management page with multi-account filtering, manual entry forms, and transfer modals.
+  - Implement Categories configuration page with color and icon pickers.
+- **Gate Status**:
+  - Execution is **HALTED** at the Phase 4 completion gate.
+  - Awaiting user approval to proceed to Phase 5.
+
 
 

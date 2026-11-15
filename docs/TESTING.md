@@ -196,12 +196,12 @@ A development phase is marked complete ONLY when all gate criteria are met:
 ## 9. Phase 4 Verification & Test Results
 
 ### 9.1 Test Execution Metrics
-- **Total Automated Tests**: 119 passed, 0 failed, 0 skipped (100% pass rate).
-- **Execution Time**: ~3.6 seconds.
-- **Overall Code Coverage**: 89% across `src/` (2,831 statements, 313 missed).
-- **Test Distribution (74 Unit, 45 Integration)**:
-  - **Phase 4 Integration Tests (32 new tests)**:
-    - `tests/integration/test_auth_api.py` (6 tests: registration with Argon2id hash, OAuth2 form login with JWT issue, invalid credentials failure, legacy user password enrollment, `/me` profile retrieval without password hash, 401 unauthorized when missing token).
+- **Total Automated Tests**: 134 passed, 0 failed, 0 skipped (100% pass rate).
+- **Execution Time**: ~6.6 seconds.
+- **Overall Code Coverage**: 89% across `src/` (2,894 statements, 319 missed).
+- **Test Distribution (88 Unit, 46 Integration)**:
+  - **Phase 4 Integration Tests (33 tests)**:
+    - `tests/integration/test_auth_api.py` (7 tests: registration with Argon2id hash, OAuth2 form login with JWT issue, invalid credentials failure, public `/enroll` returns 404, public `/enroll` absent from OpenAPI schema, `/me` profile retrieval without password hash, 401 unauthorized when missing token).
     - `tests/integration/test_transactions_api.py` (5 tests: income & expense double-entry recording, atomic inter-account transfer, compensating transaction reversal, mathematical balance reconciliation, cross-user isolation).
     - `tests/integration/test_budgets_api.py` (3 tests: set budget, category utilization with warning threshold, period budget list, cross-user category isolation).
     - `tests/integration/test_goals_api.py` (3 tests: milestone creation, contributions, withdrawals, progress calculations, cross-user isolation).
@@ -209,14 +209,16 @@ A development phase is marked complete ONLY when all gate criteria are met:
     - `tests/integration/test_investments_api.py` (4 tests: security buy with weighted-average cost basis, holdings query, security sell with realized capital P&L, insufficient units rejection, dividend earnings log, cross-user isolation).
     - `tests/integration/test_recurring_api.py` (3 tests: recurring rule creation, due rule execution spawning double-entry transaction with duplicate prevention, pause and resume, cross-user isolation).
     - `tests/integration/test_data_portability_api.py` (5 tests: CSV statement import preview & duplicate detection, XLSX statement preview, atomic batch commit, CSV export with formula injection defense, XLSX workbook export, JSON backup snapshot export, dry-run schema validation).
+  - **Administrative CLI Tests (14 unit tests)**:
+    - `tests/unit/test_cli_enroll.py` (14 tests: legacy user enrollment success with Argon2id hash, user not found handling, anti-overwrite protection preventing re-enrollment, password confirmation mismatch, length boundaries [8-128 chars], operator cancellation, database rollback on commit error, CLI argument validation, `--password` flag rejection, and strict zero-leakage assertions ensuring passwords and hashes never appear in stdout/stderr).
   - **Protected Existing Unit & Integration Tests (87 tests)**:
     - All 87 Phase 1–3 regression tests continue to pass with zero modifications.
 
 ### 9.2 Static Quality & Security Audits
 - **Ruff Linter**: `ruff check .` -> **0 errors** (all checks passed).
-- **Ruff Formatter**: `ruff format --check .` -> **86 files correctly formatted**.
+- **Ruff Formatter**: `ruff format --check .` -> **97 files correctly formatted**.
 - **Mypy Type Checking**: `mypy` -> **Success: no issues found in 67 source files** (strict mode).
-- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (6,770 lines scanned).
+- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (6,867 lines scanned across `src/`).
 - **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
 - **Database Record Preservation**: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` verified intact in `data/finance.db`.
 
