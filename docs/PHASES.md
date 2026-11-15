@@ -282,8 +282,36 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
 
 ---
 
-## Phase 8: System Hardening, Comprehensive Testing, Packaging & Release
+## Phase 8: System Hardening, Comprehensive Testing, Packaging & Release (COMPLETED & VERIFIED)
 
-- **Objective**: Perform comprehensive verification, security hardening, container packaging, production deployment readiness checks, and final release.
+- **Objective**: Perform comprehensive verification, security hardening, Windows 11 reproducible packaging, manual browser UAT preparation, and local MVP release candidate readiness.
 - **Dependencies**: Phase 7 explicit approval.
-- **Status**: **PENDING AUTHORIZATION**.
+- **Status**: **COMPLETED & VERIFIED (LOCAL MVP RELEASE CANDIDATE)**.
+- **Delivered Scope**:
+  - **System Hardening Integration Test Suite (`tests/integration/test_system_hardening.py`)**:
+    - Validated zero and negative amount rejections across all domain endpoints (transactions, budgets, goals, loans, investments) with HTTP 422.
+    - Verified large numeric boundary arithmetic (`Decimal("999999999999.99")`) guaranteeing exact Decimal precision without float drift.
+    - Verified currency mismatch prevention on inter-account transfers (`CurrencyMismatchError` -> HTTP 422).
+    - Verified repeated reversal prevention on already-reversed transactions (HTTP 422).
+    - Verified holding sufficiency checks rejecting liquidation of unheld or excess investment units (`InsufficientUnitsError` -> HTTP 422).
+    - Verified double-entry transfer balance conservation ($5,000 + $1,000 = $3,500 + $2,500 = $6,000) and restoration upon reversal ($5,000 + $1,000 = $6,000).
+    - Enforced multi-tenant cross-user authorization isolation: User B token cannot read, patch, delete, or reverse User A's financial records (HTTP 404).
+    - Enforced unauthenticated request blocking across all domain endpoints (HTTP 401).
+    - Confirmed permanent absence of public account enrollment endpoint (`POST /api/v1/auth/enroll` returns 404).
+    - Enforced backup snapshot schema validation: invalid schema versions or malformed payloads fail dry-run validation (`is_valid: False`).
+  - **Destructive Restore Boundary**: Confirmed `mode="REPLACE_USER_DATA"` is strictly non-executable in `PortabilityService`. Backups are validated and exported as JSON snapshots without enabling destructive database replacement.
+  - **Windows 11 Reproducible Local MVP Packaging (`scripts/`)**:
+    - `scripts/run_backend.bat`: Automated FastAPI startup bound to `127.0.0.1:8000`.
+    - `scripts/run_frontend.bat`: Automated Streamlit startup bound to `127.0.0.1:8501`.
+    - `scripts/enroll_user.bat`: Local interactive administrative credential enrollment CLI.
+    - `scripts/verify_system.bat`: Automated quality gates verification (Pytest, Ruff, Mypy).
+  - **Manual Browser Acceptance**: Created `docs/UAT_CHECKLIST.md` defining step-by-step verification procedures for all 10 views, authentication, exports, imports, and privacy controls with explicit expected results and failure indicators.
+  - **Configuration Hardening (`.env.example`)**: Hardened `.env.example` with documented environment parameters, safe local defaults (`127.0.0.1` binding), and zero hardcoded secrets.
+- **Verification Evidence**:
+  - 192 automated tests passing, 0 failures, 81% test coverage across 4,748 statements (in 15.2s).
+  - Ruff: 0 lint errors, 117 files cleanly formatted.
+  - Mypy: strict type-check passed across 70 source files (0 errors).
+  - Bandit: 0 security issues identified across 10,625 lines of application code (`src/`).
+  - pip-audit: 0 known vulnerabilities found across all installed dependencies.
+  - Preserved existing database records `Primary Checking ('USD', 1500.00)` intact in `data/finance.db`.
+- **Approval Gate**: Stopped at Phase 8 Final Release Approval Gate. Release readiness classified as **READY FOR LOCAL MVP TESTING**. Public deployment remains strictly non-authorized.

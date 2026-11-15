@@ -421,10 +421,39 @@ Zero vendor lock-in to SQLite:
 
 ## 10. Deployment & Containerization Strategy
 
-- **Multi-Stage Dockerfile**: Builds lightweight images using Python 3.12-slim.
-- **Docker Compose (`docker-compose.yml`)**:
-  - `fastapi-backend`: Exposes API on port 8000.
-  - `streamlit-frontend`: Exposes UI on port 8501.
-  - `postgres-db`: PostgreSQL 16 container with persistent volume.
-  - `adminer` / `pgadmin`: Optional database management GUI.
-- **Production Cloud Readiness**: Stateless container architecture compatible with AWS ECS, GCP Cloud Run, Render, or Railway.
+- **Local MVP Architecture (Phase 8)**:
+  - Loopback-bound local desktop execution on Windows 11 (`127.0.0.1:8000` for FastAPI, `127.0.0.1:8501` for Streamlit).
+  - Isolated file-based SQLite database with full foreign key cascades and check constraints.
+  - Zero external cloud services, third-party network egress, or unapproved AI leakage.
+- **Future Production Cloud Roadmap (Post-MVP)**:
+  - Multi-stage Docker packaging (`Dockerfile` and `docker-compose.yml`).
+  - Stateless container architecture compatible with AWS ECS, GCP Cloud Run, Render, or Railway with managed PostgreSQL.
+
+---
+
+## 11. Phase 8 System Hardening & Local Packaging Architecture
+
+### System Hardening Invariants
+1. **Financial Integrity & Double-Entry Conservation**:
+   - Zero and negative amounts strictly rejected on all domain entities (HTTP 422).
+   - Large numeric boundary values (up to 999,999,999,999.99) handled with exact Decimal precision.
+   - Inter-account transfers enforce strict currency matching (`CurrencyMismatchError` -> HTTP 422).
+   - Double-entry balance conservation guarantees sum equality before and after transfers and restorations upon reversal.
+   - Repeated reversal prevention blocks double-compensating mutations (HTTP 422).
+   - Holding sufficiency checks reject liquidation of unheld or excess investment units (`InsufficientUnitsError` -> HTTP 422).
+
+2. **Security & Tenant Isolation**:
+   - Unauthenticated requests blocked across all domain endpoints (HTTP 401).
+   - Multi-tenant tenant boundaries strictly enforced: cross-user lookups return HTTP 404.
+   - Public account enrollment permanently removed (`POST /api/v1/auth/enroll` returns 404).
+   - Local administrative credential enrollment CLI (`src/cli/enroll.py`) uses masked inputs and Argon2id.
+   - Formula injection mitigation sanitizes spreadsheet exports against CSV injection (`'=`, `'@`, `'+`, `'-`).
+   - Backup dry-run validation enforces schema versioning ("1.0.0"); destructive restore is strictly disabled.
+
+3. **Windows 11 Local Packaging**:
+   - `scripts/run_backend.bat`: Launches FastAPI backend on `127.0.0.1:8000`.
+   - `scripts/run_frontend.bat`: Launches Streamlit frontend on `127.0.0.1:8501`.
+   - `scripts/enroll_user.bat`: Interactive masked administrative enrollment CLI.
+   - `scripts/verify_system.bat`: Runs full local quality gates (Pytest, Ruff, Mypy).
+   - `docs/UAT_CHECKLIST.md`: Step-by-step browser acceptance testing checklist.
+

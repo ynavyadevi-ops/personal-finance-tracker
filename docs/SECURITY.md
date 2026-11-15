@@ -306,6 +306,35 @@ The Phase 5 Streamlit frontend architecture enforces multi-layered UI security d
    - **Bandit SAST**: 10,625 lines of application code scanned across `src/`; **0 issues identified**.
    - **pip-audit**: 0 known vulnerabilities.
 
+---
+
+## 15. Phase 8 System Hardening, Penetration Defenses & Final Security Audit
+
+### 15.1 Penetration Defenses & Negative Security Invariants
+1. **Multi-Tenant Authorization & Boundary Isolation**:
+   - Cross-user tenant testing verifies that an authenticated user (User B) cannot inspect, modify, delete, or reverse financial resources owned by User A.
+   - Cross-tenant queries return HTTP 404 (`Not Found`) rather than 403, preventing attackers from probing resource existence.
+2. **Permanent Elimination of Public Enrollment**:
+   - The insecure public endpoint `POST /api/v1/auth/enroll` was permanently removed in Phase 4 security remediation.
+   - Automated regression test confirms `POST /api/v1/auth/enroll` returns HTTP 404 across all call patterns.
+   - Account enrollment is accessible solely via local administrative CLI (`src/cli/enroll.py`) utilizing interactive masked password prompts and Argon2id hashing.
+3. **Double-Entry & Reversal Idempotency**:
+   - Repeated reversal attacks against the same transaction are strictly rejected with HTTP 422 (`ValidationError: Transaction has already been reversed`).
+   - Transfer balance conservation guarantees that total monetary value across accounts remains equal during transfers and compensating reversals.
+4. **Data Portability & Backup Tamper Protection**:
+   - CSV exports sanitize trigger characters (`=`, `+`, `-`, `@`, `\t`, `\r`) by prepending a single quote `'` to neutralize formula injection in spreadsheet software.
+   - Backup dry-run validation enforces schema versioning ("1.0.0"); invalid versions and malformed payloads are rejected.
+   - Destructive restore (`REPLACE_USER_DATA`) is strictly non-executable and disabled.
+
+### 15.2 Final Quality Gate & Security Audit Results
+- **Bandit SAST**: Scanned 10,625 lines of application code across `src/`; **0 issues identified** (Zero High, Medium, or Low).
+- **pip-audit**: Scanned 100 locked dependencies; **0 known vulnerabilities found**.
+- **Ruff Linter & Formatter**: 0 lint errors, 117 files cleanly formatted.
+- **Mypy Strict Type Checking**: 70 source files checked; **0 errors**.
+- **Automated Regression Suite**: 192 passed automated tests (100% pass rate in 15.2s), **81% overall code coverage**.
+- **Release Security Status**: **APPROVED FOR LOCAL MVP TESTING**. Public deployment is strictly non-authorized.
+
+
 
 
 

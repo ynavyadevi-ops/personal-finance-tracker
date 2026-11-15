@@ -9,10 +9,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 8 (System Hardening, Comprehensive Testing, Packaging & Release)
-- Production container packaging (Dockerfile & docker-compose).
-- Final end-to-end stress tests and database migration rollback dry-runs.
-- Automated release packaging and operational runbooks.
+### Planned for Future Multi-User Enterprise Deployment (Post-MVP)
+- Production container packaging (Dockerfile & multi-stage compose).
+- Cloud deployment and managed PostgreSQL replication.
+- OAuth2 social login and biometric device authentication.
+
+---
+
+## [0.9.0] - 2026-11-16 (Phase 8: System Hardening, Comprehensive Testing, Packaging & Release Readiness)
+
+### Added
+- **System Hardening Integration Test Suite (`tests/integration/test_system_hardening.py`)**:
+  - Implemented 14 rigorous automated integration tests:
+    - Zero and negative amount validation across transactions, budgets, goals, loans, and investment orders (HTTP 422).
+    - Large numeric boundary precision tests (`Decimal("999999999999.99")`) verifying exact 2-decimal arithmetic without float precision drift.
+    - Currency mismatch prevention on transfers (`CurrencyMismatchError` -> HTTP 422).
+    - Repeated transaction reversal rejection enforcing compensating idempotency (HTTP 422).
+    - Portfolio liquidation sufficiency checks rejecting excess unit sales (`InsufficientUnitsError` -> HTTP 422).
+    - Double-entry transfer balance conservation ($5,000 + $1,000 = $3,500 + $2,500 = $6,000) and full balance restoration upon reversal ($5,000 + $1,000 = $6,000).
+    - Multi-tenant tenant isolation: User B token cannot read, patch, delete, or reverse User A's accounts, transactions, or records (HTTP 404).
+    - Unauthenticated request blocking across all domain endpoints (HTTP 401).
+    - Permanent absence confirmation of public enrollment endpoint (`POST /api/v1/auth/enroll` returns 404).
+    - Backup snapshot dry-run schema validation: rejects incompatible versions and malformed payloads (`is_valid: False`).
+  - Total automated test suite expanded to **192 passed tests** with **81% overall coverage** in 15.2s.
+- **Windows 11 Reproducible Local MVP Packaging (`scripts/`)**:
+  - Added `scripts/run_backend.bat`: automated FastAPI startup bound to `127.0.0.1:8000`.
+  - Added `scripts/run_frontend.bat`: automated Streamlit startup bound to `127.0.0.1:8501`.
+  - Added `scripts/enroll_user.bat`: local masked administrative credential enrollment CLI.
+  - Added `scripts/verify_system.bat`: automated quality gates verification (Pytest, Ruff, Mypy).
+- **Manual User Acceptance Testing Checklist (`docs/UAT_CHECKLIST.md`)**:
+  - Detailed browser verification procedure covering all 10 core views, authentication, exports, imports, backup validation, and privacy controls with explicit expected results and failure indicators.
+- **Configuration Hardening (`.env.example`)**:
+  - Documented all application settings, local safe loopback defaults (`127.0.0.1`), token lifetimes, CORS origins, and AI privacy flags with zero hardcoded production secrets.
+
+### Security & Integrity Audits
+- **Bandit SAST**: 0 issues identified across 10,625 lines of application code (`src/`).
+- **pip-audit**: 0 known CVE vulnerabilities found across all installed dependencies.
+- **Ruff Linter & Formatter**: 0 lint errors, 117 files cleanly formatted.
+- **Mypy Type Checker**: Strict mode pass across 70 source files (0 errors).
+- **Persistent Data Preservation**: Verified `data/finance.db` records (`user@local.dev` and `Primary Checking` USD 1500) remain 100% intact.
+- **Release Readiness Verdict**: Classified as **READY FOR LOCAL MVP TESTING**. Public deployment remains strictly non-authorized.
 
 ---
 

@@ -235,3 +235,24 @@ flowchart TD
 | `investment_transactions` | `id` | VARCHAR(36) | No | PK, UUID | Security buy/sell/dividend ledger |
 | `audit_logs` | `id` | VARCHAR(36) | No | PK, UUID | Append-only immutable audit entry |
 
+---
+
+## 7. Phase 8 System Hardening & Local Release Specifications
+
+### 7.1 Input & Arithmetic Invariants
+- **Strict Positive Quantities**: Transactions, budgets, savings goals, loan principals, investment quantities, and prices per unit strictly reject zero or negative amounts with HTTP 422.
+- **Decimal Precision**: All monetary values use exact 2-decimal places (`Numeric(18, 2)`). Investment units use exact 4-decimal places (`Numeric(18, 4)`). Zero floating-point drift is tolerated.
+- **Boundary Precision**: Maximum supported individual balance and transaction magnitude tested up to 999,999,999,999.99 with exact Decimal fidelity.
+
+### 7.2 Double-Entry Invariants
+- **Conservation of Value**: In transfers, debits equal credits. Total balance across participating accounts is conserved during transfer execution and restored identically upon compensating reversal.
+- **Idempotent Compensating Reversals**: A transaction may only be reversed once. Subsequent reversal requests are rejected with HTTP 422.
+
+### 7.3 Security & Multi-Tenancy Invariants
+- **Authentication**: All endpoints outside `/health` and `/docs` strictly enforce JWT bearer token authentication (HTTP 401).
+- **Tenant Isolation**: All database queries partition by authenticated `user_id`. Cross-tenant record lookups return HTTP 404 to eliminate information disclosure.
+- **No Public Enrollment**: `POST /api/v1/auth/enroll` is permanently absent (HTTP 404). Account credentials are created exclusively via administrative CLI (`src/cli/enroll.py`).
+- **Data Portability & Anti-Formula Injection**: CSV exports sanitize spreadsheet formula triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) by prepending a single quote `'`. Backups validate versioning ("1.0.0") in dry-run mode; destructive restore (`REPLACE_USER_DATA`) is strictly prohibited.
+- **Local Loopback Binding**: All local services bind strictly to `127.0.0.1` (`8000` for API, `8501` for UI). No public deployment is authorized.
+
+

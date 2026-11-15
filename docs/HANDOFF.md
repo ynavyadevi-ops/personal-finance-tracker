@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 7 — Analytics Engine, Plotly Visualizations & AI Insights (COMPLETED & VERIFIED)
+> **CURRENT PHASE**: Phase 8 — System Hardening, Comprehensive Testing, Packaging & Release (COMPLETED & VERIFIED)
 
 ---
 
@@ -19,17 +19,17 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETE & VERIFIED**.
 - **Phase 5 (Streamlit Frontend Core UI & Core Pages)**: **COMPLETE & VERIFIED**.
 - **Phase 6 (Streamlit Frontend Advanced Views)**: **COMPLETE & VERIFIED**.
-- **Phase 7 (Analytics Engine, Plotly Visualizations & AI Insights)**: **COMPLETED & VERIFIED**.
-  - Implemented `FinancialAnalyticsEngine` (`src/services/analytics_service.py`) for deterministic cash flow calculations, category spending rollups, monthly trends, account balance distributions, budget vs. actual utilization, savings milestones, and debt paydown metrics.
-  - Implemented Rule-Based Explainable Insights with step-by-step calculation derivations for cash flow health, spending acceleration, budget threshold alerts, and savings goals.
-  - Built interactive Plotly visualization library (`src/frontend/components/charts.py`) adhering to the dark fintech design system (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`): income vs. expense grouped bars, net cash flow area trends, category spending donuts, budget comparative bars, savings milestone stacks, and investment allocation donuts.
-  - Implemented Privacy-First AI Insights Service (`src/services/ai_insights.py`): disabled by default; explicit user opt-in toggle; strict de-identification stripping all PII, account IDs, merchant names, raw descriptions, passwords, and JWT tokens; local narrative synthesis without third-party cloud leakage; mandatory informational non-advice disclaimer.
-  - Implemented dedicated Analytics & Insights View (`src/frontend/views/analytics.py`) with multi-tab structure (Cash Flow & Trends, Category Spending, Budgets & Milestones, Debts & Portfolio, Smart Insights & AI Privacy) and currency/timeframe filters.
-  - Updated sidebar navigation shell (`src/frontend/app.py`, `src/frontend/views/__init__.py`) supporting 10 views seamlessly.
-  - Added 19 comprehensive unit tests across analytics, AI insights, charts, and view rendering. Total automated test suite expanded to **178 passed tests** (100% pass rate in 17.3s, 81% overall test coverage).
-  - Ruff (0 errors, 116 files formatted), Mypy strict (0 errors in 70 files), Bandit SAST (0 issues in 10,625 lines), pip-audit (0 CVE vulnerabilities).
-  - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 7 Approval Gate. Phase 8 is NOT started.**
+- **Phase 7 (Analytics Engine, Plotly Visualizations & AI Insights)**: **COMPLETE & VERIFIED**.
+- **Phase 8 (System Hardening, Comprehensive Testing, Packaging & Release)**: **COMPLETED & VERIFIED (LOCAL MVP RELEASE CANDIDATE)**.
+  - Implemented 14 automated system hardening integration tests in `tests/integration/test_system_hardening.py` verifying negative amounts, large boundary limits, currency mismatch prevention, double-entry conservation and reversal, multi-tenant tenant isolation, unauthenticated request blocking, permanent absence of public enrollment, and backup snapshot validation.
+  - Confirmed destructive restore (`REPLACE_USER_DATA`) is strictly non-executable.
+  - Windows 11 reproducible local MVP packaging delivered in `scripts/` (`run_backend.bat`, `run_frontend.bat`, `enroll_user.bat`, `verify_system.bat`).
+  - Documented manual browser acceptance procedure in `docs/UAT_CHECKLIST.md`.
+  - Configuration hardened in `.env.example` with documented environment settings and loopback `127.0.0.1` safe defaults.
+  - Total automated test suite expanded to **192 passed tests** with **81% overall test coverage** (4,748 statements, 898 missed) in 15.2s.
+  - Ruff (0 errors, 117 files formatted), Mypy strict (0 errors in 70 files), Bandit SAST (0 issues in 10,625 lines), pip-audit (0 CVE vulnerabilities).
+  - Existing database records preserved intact: `Primary User ('user@local.dev', 'Primary User')` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
+- **Execution is halted at the Phase 8 Final Release Approval Gate. Public deployment is NOT authorized.**
 
 ---
 
@@ -342,6 +342,63 @@ Phase 6 will build dedicated Streamlit user interfaces for advanced financial fe
 - **Gate Status**:
   - Execution is **HALTED** at the Phase 5 completion gate.
   - Awaiting user approval to proceed to Phase 6.
+
+---
+
+## 11. Phase 8 System Hardening, Local MVP Packaging & Operational Runbook
+
+### 11.1 System Hardening Audit Summary
+1. **Negative & Zero Amount Protection**: Strictly enforced via Pydantic v2 schemas across all domain entities (HTTP 422).
+2. **Double-Entry Value Conservation**: Atomically validated in `TransactionService.record_transfer` and reversed via compensating entries in `TransactionService.reverse_transaction`. Reversals are strictly idempotent.
+3. **Multi-Tenant Isolation**: Verified across all REST endpoints. User B cannot access or mutate User A's accounts, transactions, budgets, goals, loans, or investments (HTTP 404).
+4. **Permanent Removal of Public Enrollment**: `POST /api/v1/auth/enroll` returns HTTP 404. Account password provisioning is restricted to the local administrative CLI (`src/cli/enroll.py`).
+5. **Data Portability & Backup Tamper Defense**: CSV exports escape formula injection prefixes (`=`, `+`, `-`, `@`, `\t`, `\r`). Backup dry-run validation enforces schema versioning ("1.0.0"). Destructive restore (`REPLACE_USER_DATA`) is strictly non-executable and disabled.
+
+### 11.2 Windows 11 Local MVP Packaging & Startup Guide
+To run the application locally on Windows 11 using `uv`:
+
+1. **Step 1: Configuration**:
+   ```cmd
+   copy .env.example .env
+   ```
+   (Verify `BACKEND_HOST=127.0.0.1`, `BACKEND_PORT=8000`, `FRONTEND_PORT=8501`, `DATABASE_URL=sqlite:///./data/finance.db`).
+
+2. **Step 2: Administrative User Password Enrollment**:
+   ```cmd
+   scripts\enroll_user.bat
+   ```
+   Follow the interactive prompts to assign an initial secure password to `user@local.dev`.
+
+3. **Step 3: Start the Backend API Server**:
+   ```cmd
+   scripts\run_backend.bat
+   ```
+   *Health Check*: Open `http://127.0.0.1:8000/health` (HTTP 200 `{"status": "healthy", "database": "connected"}`).
+
+4. **Step 4: Start the Frontend Web Application**:
+   ```cmd
+   scripts\run_frontend.bat
+   ```
+   Opens browser at `http://127.0.0.1:8501`. Enter `user@local.dev` and your enrolled password.
+
+5. **Step 5: Shutdown**:
+   Press `Ctrl+C` in both terminal windows to gracefully terminate the backend and frontend processes.
+
+### 11.3 Local Quality Gate Verification
+Run the consolidated quality verification script:
+```cmd
+scripts\verify_system.bat
+```
+Executes `pytest --cov=src`, `ruff check .`, `ruff format --check .`, and `mypy`.
+
+### 11.4 Phase 8 Final Release Gate Status
+- **Automated Tests**: **192 passed, 0 failed** in 15.2s.
+- **Test Coverage**: **81%** across `src/` (4,748 statements, 898 missed).
+- **Security Audits**: Bandit: 0 issues; pip-audit: 0 vulnerabilities.
+- **Data Preservation**: Existing financial records in `data/finance.db` intact.
+- **Release Readiness Verdict**: **READY FOR LOCAL MVP TESTING**.
+- **PUBLIC DEPLOYMENT IS NOT AUTHORIZED. EXECUTION IS HALTED AT THE PHASE 8 APPROVAL GATE.**
+
 
 
 
