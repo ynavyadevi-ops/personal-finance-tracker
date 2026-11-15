@@ -2,185 +2,229 @@
 
 > **DOCUMENT**: `docs/PHASES.md`  
 > **STATUS**: APPROVED BASELINE  
+> **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
 > **CURRENT ACTIVE PHASE**: Phase 0 — Foundation and Documentation
 
 ---
 
 ## Roadmap Overview
 
-Development proceeds through nine sequential phases. Each phase establishes a rigorous foundation for subsequent work. Advancing between phases requires fulfilling all phase deliverables and obtaining explicit human sign-off.
+Development is partitioned into nine strictly-bounded sequential phases. Advancing to the next phase requires satisfying all deliverables, passing all automated tests, passing security and dependency audits, and obtaining explicit human sign-off.
 
 ```
-[ Phase 0: Foundation & Docs ] ──▶ [ Phase 1: Tooling & Scaffolding ] ──▶ [ Phase 2: Database & Prisma ]
+[ Phase 0: Foundation & Docs ] ──▶ [ Phase 1: Tooling & Scaffolding ] ──▶ [ Phase 2: SQLAlchemy & Alembic ]
                                                                                    │
 ┌──────────────────────────────────────────────────────────────────────────────────┘
 ▼
-[ Phase 3: Domain & Services ] ──▶ [ Phase 4: Server Actions & API ]  ──▶ [ Phase 5: Design System ]
+[ Phase 3: Domain & Services ] ──▶ [ Phase 4: FastAPI REST Endpoints ] ──▶ [ Phase 5: Streamlit UI Shell ]
                                                                                    │
 ┌──────────────────────────────────────────────────────────────────────────────────┘
 ▼
-[ Phase 6: Feature Pages ]     ──▶ [ Phase 7: Analytics & Export ]    ──▶ [ Phase 8: Testing & Audits ]
+[ Phase 6: Streamlit Pages ]   ──▶ [ Phase 7: Analytics & Plotly ]    ──▶ [ Phase 8: Testing & Audits ]
                                                                                    │
 ┌──────────────────────────────────────────────────────────────────────────────────┘
 ▼
-[ Phase 9: Production Readiness & PostgreSQL Migration ] ──▶ [ RELEASE ]
+[ Phase 9: Production Readiness, Docker & PostgreSQL Migration ] ──▶ [ RELEASE ]
 ```
 
 ---
 
 ## Phase 0: Project Foundation and Documentation (CURRENT)
 
-- **Objective**: Inspect environment, establish system architecture, enforce security baseline, initialize test strategy, author complete documentation suite, and define AI agent operational constraints.
+- **Objective**: Establish the Python + SQL technical architecture, document security and quality baselines, initialize the documentation suite, and define AI operating constraints.
 - **Dependencies**: None.
-- **In-Scope**:
-  - Full repository inspection and Git status verification.
-  - Creation of `AGENTS.md`, `README.md`, `.gitignore`.
-  - Authoring `docs/APP.md`, `docs/SPEC.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/DEVELOPMENT_RULES.md`, `docs/PHASES.md`, `docs/CHANGELOG.md`, `docs/DECISIONS.md`.
-  - Selection and verification of compatible tech stack versions.
-- **Forbidden**: Writing application code, installing application dependencies, scaffolding folders ahead of time.
-- **Deliverables**: All 11 markdown documentation files complete, consistent, and committed.
-- **Acceptance Gate**: Explicit user sign-off on Phase 0 completion report.
+- **Explicit Scope**:
+  - Full workspace inspection and Git version control setup.
+  - Authoring `AGENTS.md`, `README.md`, `.gitignore`.
+  - Authoring `docs/APP.md`, `docs/SPEC.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/DEVELOPMENT_RULES.md`, `docs/PHASES.md`, `docs/CHANGELOG.md`, `docs/DECISIONS.md`, and `docs/HANDOFF.md`.
+  - Verification of stable compatible releases for the Python stack.
+- **Expected Deliverables**: All 12 markdown files complete, aligned, and committed to Git.
+- **Automated Tests**: Markdown link integrity checks.
+- **Security Audit**: Review security baseline policies and supply-chain vetting rules.
+- **Dependency Audit**: Review target dependency versions against official PyPI advisories.
+- **Acceptance Criteria**: All 12 documents exist and are synchronized; zero application code written.
+- **Approval Gate**: Mandatory stop; wait for explicit user approval before proceeding to Phase 1.
 
 ---
 
-## Phase 1: Environment Setup, Tooling & Core Project Scaffolding
+## Phase 1: Environment Setup, Python Tooling & Core Project Scaffolding
 
-- **Objective**: Initialize Next.js project with TypeScript, configure ESLint, Prettier, Tailwind CSS, Vitest, and Playwright.
-- **Dependencies**: Phase 0 approval.
-- **In-Scope**:
-  - `package.json` initialization with approved dependencies and pinned versions.
-  - Next.js App Router configuration (`next.config.js`).
-  - TypeScript configuration (`tsconfig.json`) with strict flags.
-  - Tailwind CSS and PostCSS configuration.
-  - Vitest test runner setup (`vitest.config.ts`).
-  - Playwright test runner configuration (`playwright.config.ts`).
-  - Setup `.env.example` and validated `src/lib/env.ts`.
-- **Forbidden**: Implementing application features, writing database schemas.
-- **Deliverables**: Clean `npm run build`, `npm run typecheck`, and `npm run test` on empty scaffold.
-- **Acceptance Gate**: Passing build and test runs; zero dependency security warnings (`npm audit`).
-
----
-
-## Phase 2: Database Modeling, Prisma Schema & Migrations
-
-- **Objective**: Configure Prisma ORM with SQLite, create full schema modeling, generate migrations, and implement database seed script.
-- **Dependencies**: Phase 1 approval.
-- **In-Scope**:
-  - `prisma/schema.prisma` modeling `User`, `Account`, `Category`, `Transaction`, `Budget`, `RecurringRule`, `AuditLog`.
-  - SQLite database migration (`npx prisma migrate dev`).
-  - Prisma client singleton setup (`src/lib/db.ts`).
-  - Database seed script (`prisma/seed.ts`) populating default categories, test user, and initial demo accounts.
-- **Forbidden**: Writing frontend pages or UI components.
-- **Deliverables**: Applied migrations, valid SQLite database file, successful seed execution, type-safe Prisma client.
-- **Acceptance Gate**: Successful migration replay, verified relations and constraints.
+- **Objective**: Set up Python 3.12 virtual environment, configure package dependencies via `pyproject.toml`, establish Ruff and Mypy tooling, configure Pytest, and create directory structure.
+- **Dependencies**: Phase 0 explicit approval.
+- **Explicit Scope**:
+  - `pyproject.toml` configuration with pinned dependencies (FastAPI, Streamlit, SQLAlchemy, Alembic, Pydantic, Pandas, Plotly, Pytest, HTTPX, Bandit, pip-audit, Ruff, Mypy).
+  - Virtual environment creation via `uv` or `python -m venv`.
+  - Ruff configuration (`ruff.toml` or `pyproject.toml`) for linting and formatting.
+  - Mypy configuration with strict flags (`mypy.ini` or `pyproject.toml`).
+  - Pytest setup (`pytest.ini`).
+  - Empty package scaffolding (`src/`, `tests/`).
+  - Environment settings template (`.env.example`) and validated config loader (`src/core/config.py`).
+- **Expected Deliverables**: Clean environment, passing linting, working config loader, and discoverable Pytest setup.
+- **Automated Tests**: `pytest` executes and passes against empty test discovery.
+- **Security Audit**: Initial `bandit -r src/` scan completes with zero high-severity findings.
+- **Dependency Audit**: `pip-audit` runs against locked dependencies with zero known CVEs.
+- **Acceptance Criteria**: `ruff check .` passes; `mypy --strict src` passes; `pytest` passes; `pip-audit` reports 0 vulnerabilities.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 2.
 
 ---
 
-## Phase 3: Core Domain Services, Validation Schemas & Business Logic
+## Phase 2: Database Modeling, SQLAlchemy ORM & Alembic Migrations
 
-- **Objective**: Implement pure TypeScript domain business logic, financial arithmetic utilities, and Zod validation schemas.
-- **Dependencies**: Phase 2 approval.
-- **In-Scope**:
-  - Financial utility functions (`centsToDollars`, `dollarsToCents`, rounding safeguards).
-  - Zod schemas: `account.schema.ts`, `transaction.schema.ts`, `budget.schema.ts`.
-  - Domain services:
-    - `AccountService`: balance calculations, account lifecycle.
-    - `TransactionService`: atomic transfers, categorization, transaction filtering.
+- **Objective**: Implement SQLAlchemy 2.0 declarative models, configure Alembic migrations for SQLite, and write database seed script.
+- **Dependencies**: Phase 1 explicit approval.
+- **Explicit Scope**:
+  - Database engine and session factory (`src/db/session.py`, `src/db/base.py`).
+  - SQLAlchemy models (`User`, `Account`, `Category`, `Transaction`, `Budget`, `RecurringRule`, `AuditLog`).
+  - Alembic initialization (`alembic/`) with autogenerate configuration.
+  - Initial migration revision generating SQLite schema.
+  - Database seed script (`src/db/seed.py`) populating default categories and local test user.
+- **Expected Deliverables**: Alembic migration files, generated `data/finance.db`, and functional seed script.
+- **Automated Tests**: Pytest tests for database model creation, foreign key constraints, and migration upgrade/downgrade cycles.
+- **Security Audit**: Bandit scan verifies no raw SQL string concatenation in models or seeds.
+- **Dependency Audit**: `pip-audit` check.
+- **Acceptance Criteria**: `alembic upgrade head` runs cleanly; seed script populates data; unit tests pass.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 3.
+
+---
+
+## Phase 3: Core Domain Services, Pydantic Schemas & Financial Arithmetic
+
+- **Objective**: Implement exact decimal financial calculations, Pydantic request/response schemas, and core domain business services.
+- **Dependencies**: Phase 2 explicit approval.
+- **Explicit Scope**:
+  - Decimal currency calculation utilities (`src/core/money.py`): rounding, formatting, conversions.
+  - Pydantic v2 validation models (`src/schemas/`): `AccountCreate`, `TransactionCreate`, `BudgetCreate`, etc.
+  - Generic repository interface and implementations (`src/repositories/`).
+  - Domain business services (`src/services/`):
+    - `AccountService`: balance computation, account lifecycle.
+    - `TransactionService`: atomic transfers, categorization, pagination filters.
     - `BudgetService`: monthly limits, threshold alert computation.
-  - Comprehensive unit test suite for services and arithmetic with 90%+ branch coverage.
-- **Forbidden**: Building UI pages or HTTP route endpoints.
-- **Deliverables**: Fully tested service layer with passing Vitest unit tests.
-- **Acceptance Gate**: 100% passing unit tests, zero floating-point arithmetic errors.
+- **Expected Deliverables**: Fully tested service layer with pure business logic decoupled from HTTP frameworks.
+- **Automated Tests**: Unit test suite achieving $\ge 90\%$ branch coverage on services and money calculations.
+- **Security Audit**: Bandit scan on services; boundary tests on monetary validation.
+- **Dependency Audit**: `pip-audit` check.
+- **Acceptance Criteria**: 100% of unit tests pass; zero floating-point arithmetic used; Zod/Pydantic validation rejects all invalid inputs.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 4.
 
 ---
 
-## Phase 4: Backend API Routes & Server Actions
+## Phase 4: FastAPI REST API, Endpoints & Authentication
 
-- **Objective**: Expose domain services via Next.js Server Actions and Route Handlers with error envelopes and audit logging.
-- **Dependencies**: Phase 3 approval.
-- **In-Scope**:
-  - Server Actions for Account, Transaction, and Budget mutations.
-  - Next.js Route Handlers for CSV export stream and bulk import (`/api/transactions/export`, `/api/transactions/import`).
-  - Standardized JSON response envelope (`ApiResponse<T>`).
-  - Global error handling and logging wrapper.
-  - Integration tests for Server Actions using test database.
-- **Forbidden**: Frontend page construction.
-- **Deliverables**: Working Server Actions, passing integration tests.
-- **Acceptance Gate**: Integration tests verify happy paths and error handling (400, 404, 422).
-
----
-
-## Phase 5: UI Design System & Component Library
-
-- **Objective**: Establish shadcn/ui component library, theme tokens, layout shell, and navigation.
-- **Dependencies**: Phase 4 approval.
-- **In-Scope**:
-  - shadcn/ui components (`Button`, `Card`, `Dialog`, `DropdownMenu`, `Input`, `Select`, `Table`, `Tabs`, `Toast`).
-  - App shell layout (`Sidebar`, `Header`, `ThemeToggle`, `MobileNav`).
-  - Responsive design tokens and dark/light mode themes.
-  - Accessible form components with React Hook Form & Zod error integration.
-- **Forbidden**: Deep feature logic or backend modifications.
-- **Deliverables**: Reusable UI component library rendered in isolation or styleguide page.
-- **Acceptance Gate**: Accessibility audit (WCAG 2.1 AA), responsive across mobile/tablet/desktop.
+- **Objective**: Expose domain services via FastAPI REST endpoints, implement JWT authentication, error handling, and request correlation.
+- **Dependencies**: Phase 3 explicit approval.
+- **Explicit Scope**:
+  - FastAPI application factory (`src/api/main.py`) with CORS, exception handlers, and correlation ID middleware.
+  - Dependency injection providers (`src/api/dependencies.py`): DB session, current user.
+  - Routers (`src/api/routers/`):
+    - `/api/v1/auth`: login, token refresh.
+    - `/api/v1/accounts`: account CRUD, archive.
+    - `/api/v1/transactions`: ledger CRUD, atomic transfer endpoint, CSV stream.
+    - `/api/v1/budgets`: budget CRUD, progress stats.
+    - `/api/v1/analytics`: summary metrics, cash flow rollups.
+- **Expected Deliverables**: Fully operational, documented REST API with Swagger/OpenAPI docs (`/docs`).
+- **Automated Tests**: HTTPX `AsyncClient` integration tests for every endpoint, validating 200, 201, 400, 401, 404, and 422 responses.
+- **Security Audit**: Bandit scan; tenant isolation tests verifying User A cannot access User B's resources.
+- **Dependency Audit**: `pip-audit` check.
+- **Acceptance Criteria**: All integration tests pass; OpenAPI schema renders without error; tenant security verified.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 5.
 
 ---
 
-## Phase 6: Application Pages & User Features
+## Phase 5: Streamlit UI Framework, Layout & Reusable Widgets
 
-- **Objective**: Construct user-facing application screens connecting UI components to Server Actions.
-- **Dependencies**: Phase 5 approval.
-- **In-Scope**:
-  - Dashboard overview (`/dashboard`): balance summary cards, recent transactions, quick actions.
-  - Accounts page (`/accounts`): list accounts, create/edit account modal, archive toggle.
-  - Transactions page (`/transactions`): searchable, filterable data table, transaction creation modal, transfer dialog.
-  - Budgets page (`/budgets`): category budget cards, progress bars, threshold alerts, budget editing.
-- **Forbidden**: Complex analytics charts or data export (reserved for Phase 7).
-- **Deliverables**: Fully operational core application workflows.
-- **Acceptance Gate**: Playwright E2E tests passing for account, transaction, and budget CRUD journeys.
+- **Objective**: Build the Streamlit multi-page foundation, navigation sidebar, theme configuration, and reusable UI components.
+- **Dependencies**: Phase 4 explicit approval.
+- **Explicit Scope**:
+  - Streamlit entry point (`src/frontend/app.py`) with authentication gate and session state handling.
+  - Asynchronous HTTPX client wrapper (`src/frontend/api_client.py`).
+  - Reusable UI component modules:
+    - Metric cards (`src/frontend/components/metrics.py`).
+    - Plotly chart builders (`src/frontend/components/charts.py`).
+    - Standardized data tables with formatting (`src/frontend/components/tables.py`).
+    - Forms with validation and error toasts (`src/frontend/components/forms.py`).
+  - Streamlit configuration (`.streamlit/config.toml`) for theming and server settings.
+- **Expected Deliverables**: Operational Streamlit shell communicating with FastAPI backend.
+- **Automated Tests**: Unit tests for `api_client.py` and Plotly chart generators using mock API responses.
+- **Security Audit**: Bandit scan verifying no secret leakage in Streamlit frontend.
+- **Dependency Audit**: `pip-audit` check.
+- **Acceptance Criteria**: Streamlit renders cleanly; theme switches between light and dark; API client handles network errors gracefully.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 6.
 
 ---
 
-## Phase 7: Analytics, Visualizations & Data Export
+## Phase 6: Streamlit Application Pages (Accounts, Transactions, Budgets)
 
-- **Objective**: Implement Recharts data visualizations, cash flow trends, net worth tracking, and CSV/JSON import/export.
-- **Dependencies**: Phase 6 approval.
-- **In-Scope**:
-  - Recharts components:
-    - Category spending distribution (Donut / Pie chart).
-    - Monthly Income vs. Expense (Grouped Bar chart).
-    - Net Worth historical trajectory (Area / Line chart).
-  - Reports page (`/reports`) with custom date-range filters.
-  - CSV export stream generator (RFC 4180).
-  - Bank CSV import wizard: file upload, column mapping preview, deduplication, batch insert.
-- **Deliverables**: Interactive analytics dashboards and verified data portability tools.
-- **Acceptance Gate**: Accurate visual renderings with zero console errors; valid CSV export/import round-trip.
+- **Objective**: Develop user-facing feature pages in Streamlit for account management, transaction ledger, and monthly budgeting.
+- **Dependencies**: Phase 5 explicit approval.
+- **Explicit Scope**:
+  - `pages/1_Dashboard.py`: Net worth callout, recent transactions, quick actions.
+  - `pages/2_Accounts.py`: Account summary table, add/edit modal forms, archive toggle.
+  - `pages/3_Transactions.py`: Searchable, filterable ledger table, expense/income/transfer entry forms.
+  - `pages/4_Budgets.py`: Category budget cards, dynamic progress bars, over-budget warning alerts.
+- **Expected Deliverables**: Complete, functional personal finance user interface.
+- **Automated Tests**: Streamlit `AppTest` or automated integration tests simulating end-to-end user workflows.
+- **Security Audit**: Bandit scan; verification of input sanitization across all Streamlit forms.
+- **Dependency Audit**: `pip-audit` check.
+- **Acceptance Criteria**: Users can create accounts, log transactions, perform transfers, and set budgets with immediate visual feedback.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 7.
+
+---
+
+## Phase 7: Analytics, Plotly Visualizations & Pandas Data Processing
+
+- **Objective**: Implement advanced financial analytics using Pandas and interactive Plotly visualizations; implement CSV/Excel statement import and export.
+- **Dependencies**: Phase 6 explicit approval.
+- **Explicit Scope**:
+  - `pages/5_Reports.py`:
+    - Monthly Cash Flow (Plotly grouped bar chart: Income vs. Expense).
+    - Category Expense Breakdown (Plotly interactive donut chart).
+    - Net Worth Trajectory (Plotly time-series area chart).
+  - Pandas data processing pipelines: monthly rollups, average burn rate, savings rate percentage.
+  - Statement Import Wizard: upload CSV/Excel, map columns via Pandas, preview DataFrame, batch commit.
+  - Data Export: download full or filtered transaction ledger as CSV or Excel.
+- **Expected Deliverables**: Interactive analytics dashboard and full data portability tools.
+- **Automated Tests**: Unit and integration tests for Pandas aggregation pipelines and CSV export/import round-trips.
+- **Security Audit**: Bandit scan; file upload validation (MIME type, file size limit, malicious content prevention).
+- **Dependency Audit**: `pip-audit` check.
+- **Acceptance Criteria**: Charts render interactively; statement import correctly deduplicates; CSV export is RFC 4180 compliant.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 8.
 
 ---
 
 ## Phase 8: Comprehensive Testing, Security Audits & Performance Optimization
 
-- **Objective**: Execute end-to-end regression testing, conduct security audits, optimize database queries, and verify bundle performance.
-- **Dependencies**: Phase 7 approval.
-- **In-Scope**:
-  - Full Playwright E2E suite covering all user workflows across browsers.
-  - Security audit: `npm audit`, OSV-Scanner, OWASP checklist verification.
-  - Boundary stress testing: negative amounts, large numbers, deep pagination.
-  - Bundle size optimization (dynamic imports for Recharts).
-  - Accessibility and Lighthouse performance audits (Performance >90, Accessibility >95).
-- **Deliverables**: QA test execution report, zero open security vulnerabilities.
-- **Acceptance Gate**: All unit, integration, and E2E tests passing in CI; clean security scan.
+- **Objective**: Conduct comprehensive regression testing, static and dynamic security audits, query performance profiling, and bundle optimization.
+- **Dependencies**: Phase 7 explicit approval.
+- **Explicit Scope**:
+  - Full end-to-end regression test suite execution.
+  - Boundary stress testing: extreme amounts, high volume transaction datasets (50,000+ rows).
+  - Static security audit: `bandit -r src/ -ll -ii` with zero unresolved findings.
+  - Dependency audit: `pip-audit` with zero unresolved vulnerabilities.
+  - Database index profiling: EXPLAIN QUERY PLAN verification on ledger filtering.
+  - Caching optimization in Streamlit (`@st.cache_data`).
+- **Expected Deliverables**: Comprehensive QA test report and clean security audit certifications.
+- **Automated Tests**: 100% pass rate across unit, integration, and security test suites.
+- **Security Audit**: Zero High or Critical findings in Bandit and pip-audit.
+- **Dependency Audit**: Clean bill of health from `pip-audit`.
+- **Acceptance Criteria**: All automated tests pass; zero security vulnerabilities; query execution $< 100\text{ ms}$.
+- **Approval Gate**: Explicit user approval required to proceed to Phase 9.
 
 ---
 
-## Phase 9: Production Readiness, PostgreSQL Migration Verification & Deployment
+## Phase 9: Production Readiness, Dockerization, PostgreSQL Migration Verification & Deployment
 
-- **Objective**: Validate PostgreSQL schema compatibility, verify migration pipeline, configure production environment, and finalize documentation.
-- **Dependencies**: Phase 8 approval.
-- **In-Scope**:
-  - Dual database verification: run migrations and test suite against PostgreSQL instance.
-  - Verification of data migration script (`scripts/migrate-sqlite-to-pg.ts`).
-  - Production build configuration, security headers, and connection pooling settings.
-  - Deployment instructions (Vercel, Docker, AWS/Render).
-  - Final documentation review and project handoff.
-- **Deliverables**: Production-ready code, verified PostgreSQL migration path, deployment artifacts.
-- **Acceptance Gate**: Successful test execution against PostgreSQL; final production sign-off.
+- **Objective**: Package application into production Docker containers, verify SQLite-to-PostgreSQL migration pipeline, configure production logging and backups, and finalize documentation.
+- **Dependencies**: Phase 8 explicit approval.
+- **Explicit Scope**:
+  - Production `Dockerfile` and `docker-compose.yml` (FastAPI, Streamlit, PostgreSQL 16).
+  - Dual database verification: apply Alembic migrations against live PostgreSQL container.
+  - Verification of data migration utility (`scripts/verify_pg_migration.py`).
+  - Production security hardening: SSL enforcement, environment variable secret injection.
+  - Automated database backup script (`scripts/backup_db.sh`).
+  - Final documentation update and handoff readiness (`docs/HANDOFF.md`).
+- **Expected Deliverables**: Production Docker configuration, verified PostgreSQL migration, and complete operations guide.
+- **Automated Tests**: Full test suite passes against PostgreSQL database backend.
+- **Security Audit**: Final Bandit and pip-audit certification.
+- **Dependency Audit**: Final supply-chain verification.
+- **Acceptance Criteria**: Docker containers launch cleanly; PostgreSQL migration reconciles balances to the exact cent; production sign-off.
+- **Approval Gate**: Final production sign-off.

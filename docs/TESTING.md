@@ -2,118 +2,126 @@
 
 > **DOCUMENT**: `docs/TESTING.md`  
 > **STATUS**: APPROVED BASELINE  
-> **PHASE**: Phase 0 — Foundation and Documentation
+> **STACK**: Python 3.12 (Pytest, pytest-asyncio, HTTPX, Bandit, pip-audit)  
+> **CURRENT PHASE**: Phase 0 — Foundation and Documentation
 
 ---
 
 ## 1. Quality Assurance Philosophy & Testing Pyramid
 
-Financial applications require zero tolerance for calculation bugs, data corruption, or unhandled exceptions. To balance thoroughness with execution velocity, we adhere to the **Testing Pyramid**:
+Financial applications require deterministic accuracy, ACID compliance, and zero tolerance for calculation bugs. The testing framework adopts the **Testing Pyramid**:
 
 ```
            / \
           /   \
-         / E2E \       10% (Playwright) — Critical user workflows
+         / E2E \       10% (Streamlit AppTest / Full-Journey HTTPX)
         /───────\
-       / Integr. \     20% (Vitest + Testing Library) — Server actions & components
+       / Integr. \     20% (Pytest + HTTPX AsyncClient + In-Memory DB)
       /───────────\
-     /    Unit     \   70% (Vitest) — Pure domain logic, schemas & arithmetic
+     /    Unit     \   70% (Pytest) — Decimal calculations, Pydantic & Services
     /───────────────\
 ```
 
-- **Target Coverage**: Minimum 85% branch coverage on Domain Services and financial calculation engines; 100% schema validation coverage on Zod schemas.
+- **Target Coverage**: Minimum 85% branch coverage on Domain Services and financial calculation engines; 100% schema validation coverage on Pydantic models.
 
 ---
 
 ## 2. Testing Framework Architecture
 
-### Vitest (Unit & Integration)
-- **Tool**: `vitest` with `@testing-library/react` and `@testing-library/jest-dom`.
-- **Purpose**: Fast in-memory execution, ESM native, compatible with Next.js and Vite transforms.
+### Pytest & pytest-asyncio (Unit & Integration)
+- **Tool**: `pytest` with `pytest-asyncio` for asynchronous test coroutines.
+- **Purpose**: Fast test discovery, parameterized tests, and modular fixtures (`conftest.py`).
 - **Scope**:
-  - Financial calculations (cents conversions, balance updates, rollover calculations).
-  - Domain service business logic (`AccountService`, `TransactionService`, `BudgetService`).
-  - Zod validation schemas (boundary conditions, malformed input rejection).
-  - Server Action handlers and error transformation.
+  - Exact decimal currency arithmetic (`money.py`).
+  - Domain business logic (`AccountService`, `TransactionService`, `BudgetService`).
+  - Pydantic v2 validation models and boundary constraints.
+  - SQLAlchemy models and repository methods.
 
-### Playwright (End-to-End)
-- **Tool**: `@playwright/test`.
-- **Purpose**: Multi-browser automated regression testing against real Chromium, Firefox, and WebKit rendering engines.
+### HTTPX AsyncClient (API Integration)
+- **Tool**: `httpx.AsyncClient` with `ASGITransport(app=app)`.
+- **Purpose**: In-memory HTTP dispatch directly against the FastAPI application without spinning up a live network port.
 - **Scope**:
-  - Critical path: User creates account $\to$ logs transactions $\to$ views dashboard balance $\to$ monitors budget consumption $\to$ exports CSV.
-  - Form validation error presentation and modal dialog interactions.
-  - Theme switching and responsive layout verification.
+  - Full HTTP request/response cycle for all `/api/v1/*` endpoints.
+  - Authentication headers, JWT verification, and 401/403/422 status code validation.
+  - JSON payload serialization and deserialization.
+
+### Streamlit App Testing (E2E & UI Verification)
+- **Tool**: `streamlit.testing.v1.AppTest`.
+- **Purpose**: Programmatic simulation of user interactions with Streamlit forms, buttons, and session state without a browser harness.
+- **Scope**:
+  - Core journey: User creates account $\to$ logs transaction $\to$ checks dashboard metrics $\to$ inspects budget utilization.
 
 ---
 
 ## 3. Test Suites & Categorization
 
 ### 1. Unit Testing
-- **Location**: `src/**/*.test.ts`
-- **Focus**: Pure functions with zero side-effects.
+- **Location**: `tests/unit/`
+- **Focus**: Pure functions and isolated domain components.
 - **Key Test Cases**:
-  - `centsToDollars(1050)` returns `"$10.50"`.
-  - `dollarsToCents("10.50")` returns `1050`.
-  - Rejection of invalid dates, negative amounts, or malformed category names in Zod schemas.
-  - Calculation of category percentage utilization against monthly limits.
+  - Decimal precision tests: verify that `Decimal("0.10") + Decimal("0.20") == Decimal("0.30")`.
+  - Rejection of invalid dates, negative amounts, or malformed category names in Pydantic models.
+  - Calculation of category budget utilization percentages and alert thresholds.
 
 ### 2. Integration Testing
-- **Location**: `src/services/__tests__/*.integration.test.ts`
-- **Focus**: Domain services interacting with an in-memory or ephemeral test database.
+- **Location**: `tests/integration/`
+- **Focus**: API endpoints interacting with an in-memory SQLite database (`sqlite+aiosqlite:///:memory:`).
 - **Key Test Cases**:
-  - Creating a transaction correctly adjusts the parent account balance in the database.
-  - Executing a transfer decrements source account and increments destination account atomically.
-  - Rolling back a failed transfer leaves both account balances unchanged.
-  - Attempting to delete an account with existing transactions throws an error.
+  - `POST /api/v1/transactions`: Creates transaction, updates account balance, and consumes category budget.
+  - `POST /api/v1/transactions/transfer`: Atomic transfer decrements source account and increments destination account.
+  - Rollback on failure: Verify that an error midway through a transfer rolls back both accounts.
+  - Account deletion protection: Deleting an account with transactions returns HTTP 400 with a descriptive error.
 
-### 3. End-to-End (E2E) Testing
-- **Location**: `e2e/*.spec.ts`
-- **Focus**: Full browser user journeys.
-- **Key Test Suites**:
-  - `account-management.spec.ts`: Create, update, and archive accounts.
-  - `transactions.spec.ts`: Add income, expense, and transfer; filter ledger by category; verify balance cards.
-  - `budgets.spec.ts`: Set category monthly limit; trigger budget threshold warning banner; verify progress bar.
-  - `data-portability.spec.ts`: Export CSV; verify downloaded file contents; import sample bank CSV.
+### 3. Database & Migration Testing
+- **Location**: `tests/database/`
+- **Focus**: Alembic schema migrations and data integrity.
+- **Key Test Cases**:
+  - Test migration upgrade: `alembic upgrade head` applies cleanly on an empty database.
+  - Test migration downgrade: `alembic downgrade -1` rolls back cleanly without leaving orphan tables.
+  - Seed script integrity: Verify default categories and demo user populate correctly without duplicate key errors.
 
-### 4. Regression & Continuous Testing
-- Pre-commit hook runs linting and unit tests (`lint-staged`).
-- Pull requests trigger full CI workflow:
-  1. Static type checking (`tsc --noEmit`).
-  2. Linting (`next lint`).
-  3. Vitest suite (`vitest run`).
-  4. Playwright E2E suite (`playwright test`).
-
-### 5. Database Testing
-- **Prisma Migrations**: Test forward migration and backward compatibility on clean test database.
-- **Seed Integrity**: Verify that default categories and demo accounts seed without duplicate key conflicts.
-
-### 6. Security Testing
-- **Boundary Testing**: Inject extreme values (`Number.MAX_SAFE_INTEGER`, negative numbers, zero, SQL injection strings, XSS payloads `<script>`).
-- **Authorization & Tenant Isolation**: Verify that a user session cannot read, modify, or delete records belonging to another `userId`.
-- **Automated Scanning**: Run `npm audit` and OSV-Scanner in CI to detect vulnerable dependencies.
-
-### 7. Build Verification
-- Final production build check:
-  ```bash
-  npm run build
-  ```
-  Ensures zero compilation errors, zero unresolved imports, and valid static page generation.
+### 4. Security Testing
+- **Location**: `tests/security/`
+- **Focus**: Authorization, injection resistance, and tenant isolation.
+- **Key Test Cases**:
+  - Tenant scoping: User A cannot read, edit, or delete transactions owned by User B.
+  - SQL injection payload testing: Ensure raw SQL strings in filter fields are treated as literal strings.
+  - Boundary stress testing: Large numbers (`Decimal("99999999999999.99")`), zero amounts, and negative numbers.
 
 ---
 
-## 4. Phase Completion Criteria Gates
+## 5. Security & Dependency Verification Tools
+
+Every CI run executes:
+```bash
+# 1. Static Application Security Testing (SAST)
+bandit -r src/ -ll -ii
+
+# 2. Dependency Vulnerability Audit
+pip-audit
+
+# 3. Static Type Checking
+mypy --strict src
+
+# 4. Code Formatting & Linting
+ruff check .
+```
+
+---
+
+## 6. Phase Completion Criteria Gates
 
 A development phase is marked complete ONLY when all gate criteria are met:
 
-| Phase | Quality & Testing Gate Criteria |
+| Phase | Quality, Testing & Security Gate Criteria |
 | :--- | :--- |
-| **Phase 0** | All 11 foundational documents exist, verified consistent, no application code written, explicit user sign-off. |
-| **Phase 1** | Tooling operational, `npm run build` succeeds on empty scaffold, TypeScript strict mode enabled, Vitest runs empty test. |
-| **Phase 2** | Prisma migrations apply cleanly, schema models all required financial entities, seed script creates valid baseline data. |
-| **Phase 3** | Domain services written with 90%+ unit test coverage, all financial invariants verified with unit tests. |
-| **Phase 4** | Server Actions and API endpoints return standardized envelope responses, Zod validation passes 100% of boundary test cases. |
-| **Phase 5** | Design system components render in both light and dark modes, accessible according to WCAG 2.1 AA. |
-| **Phase 6** | Feature pages fully functional, integration tests pass for account, transaction, and budget CRUD workflows. |
-| **Phase 7** | Analytics correctly aggregate data, Recharts render without console warnings, CSV export matches schema RFC 4180. |
-| **Phase 8** | Vitest and Playwright test suites achieve 100% pass rate; security audit (`npm audit`) reports 0 vulnerabilities. |
-| **Phase 9** | PostgreSQL migration verified; production build generates clean output; documentation updated. |
+| **Phase 0** | All 12 foundational documents exist, Python architecture established, Bandit & pip-audit policies set, explicit user approval. |
+| **Phase 1** | Virtual environment functional, `pyproject.toml` locked, `ruff check` passes, Pytest discovers empty test suite, `pip-audit` reports 0 CVEs. |
+| **Phase 2** | Alembic migrations apply cleanly to SQLite, models define all financial entities, seed script populates default categories. |
+| **Phase 3** | Domain services and decimal money utilities achieve 90%+ branch coverage in Pytest; zero floating-point math detected. |
+| **Phase 4** | FastAPI endpoints return standardized `GenericResponse[T]`, HTTPX integration tests pass for all CRUD operations, Pydantic validation handles 100% boundary cases. |
+| **Phase 5** | Streamlit UI framework operational, custom Plotly charts render cleanly, session state helpers tested. |
+| **Phase 6** | Full Streamlit application pages functional; AppTest / HTTPX verifies account, transaction, and budget user journeys. |
+| **Phase 7** | Pandas analytics aggregate historical data, Plotly graphs render without errors, CSV/Excel export/import passes round-trip tests. |
+| **Phase 8** | Full Pytest test suite passes (100% pass rate); Bandit SAST reports 0 issues; pip-audit reports 0 vulnerabilities. |
+| **Phase 9** | PostgreSQL migration verified with `verify_pg_migration.py`; Docker containers build and run cleanly; production deployment verified. |

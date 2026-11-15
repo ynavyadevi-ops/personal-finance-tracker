@@ -1,63 +1,86 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-# Testing
-coverage/
-test-results/
-playwright-report/
-blob-report/
-playwright/.cache/
+# C extensions
+*.so
 
-# Next.js build output
-.next/
-out/
+# Distribution / packaging
+.Python
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Production builds
-*.tsbuildinfo
-next-env.d.ts
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.uv/
 
-# Environment variables
+# Environment Variables & Secrets
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env.local
+.env.development
+.env.test
+.env.production
+*.env
 
-# Databases and Local Storage
+# SQLite Databases & Local Storage
 *.db
 *.db-journal
 *.sqlite
+*.sqlite3
 *.sqlite-journal
-prisma/*.db
-prisma/*.db-journal
+data/*.db
+data/*.sqlite
 
-# Logs
-logs/
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Linting & Formatting
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Streamlit Local Config & Cache
+.streamlit/secrets.toml
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+
+# IDE & Editor files
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
 
 # Operating System Files
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# IDE and Editor
-.idea/
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-*.sublime-project
-*.sublime-workspace
-
-# Temporary & Cache
-.turbo/
-.cache/
+# Temporary files
 tmp/
+*.tmp

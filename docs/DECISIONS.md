@@ -2,126 +2,170 @@
 
 > **DOCUMENT**: `docs/DECISIONS.md`  
 > **STATUS**: ACTIVE & ENFORCED  
+> **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
 > **CURRENT PHASE**: Phase 0 — Foundation and Documentation
 
 ---
 
 ## Index of Architectural Decisions
 
-- [ADR-001: Full-Stack Framework Selection (Next.js App Router)](#adr-001-full-stack-framework-selection-nextjs-app-router)
-- [ADR-002: Dual Database Strategy (SQLite Local, PostgreSQL Production)](#adr-002-dual-database-strategy-sqlite-local-postgresql-production)
-- [ADR-003: Monetary Representation Model (Integer Minor Units)](#adr-003-monetary-representation-model-integer-minor-units)
-- [ADR-004: UI Component Architecture (Tailwind CSS & shadcn/ui)](#adr-004-ui-component-architecture-tailwind-css--shadcnui)
-- [ADR-005: Testing Suite Strategy (Vitest & Playwright)](#adr-005-testing-suite-strategy-vitest--playwright)
-- [ADR-006: Schema Validation & Type Invariance (Zod)](#adr-006-schema-validation--type-invariance-zod)
-- [ADR-007: Phased Implementation Lifecycle with Approval Gates](#adr-007-phased-implementation-lifecycle-with-approval-gates)
+- [ADR-001: Backend Framework Selection (FastAPI)](#adr-001-backend-framework-selection-fastapi)
+- [ADR-002: Frontend Dashboard Selection (Streamlit)](#adr-002-frontend-dashboard-selection-streamlit)
+- [ADR-003: ORM & Migration Strategy (SQLAlchemy 2.0 & Alembic)](#adr-003-orm--migration-strategy-sqlalchemy-20--alembic)
+- [ADR-004: Dual Database Strategy (SQLite Local, PostgreSQL Production)](#adr-004-dual-database-strategy-sqlite-local-postgresql-production)
+- [ADR-005: Monetary Representation Model (Python Decimal & SQL Numeric)](#adr-005-monetary-representation-model-python-decimal--sql-numeric)
+- [ADR-006: Schema Validation & Settings Management (Pydantic v2)](#adr-006-schema-validation--settings-management-pydantic-v2)
+- [ADR-007: Data Analytics & Visualizations (Pandas & Plotly)](#adr-007-data-analytics--visualizations-pandas--plotly)
+- [ADR-008: Testing Suite Architecture (Pytest & HTTPX)](#adr-008-testing-suite-architecture-pytest--httpx)
+- [ADR-009: Security & Supply-Chain Auditing (Bandit & pip-audit)](#adr-009-security--supply-chain-auditing-bandit--pip-audit)
+- [ADR-010: Phased Implementation Lifecycle with Approval Gates](#adr-010-phased-implementation-lifecycle-with-approval-gates)
 
 ---
 
-## ADR-001: Full-Stack Framework Selection (Next.js App Router)
+## ADR-001: Backend Framework Selection (FastAPI)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: The Personal Finance Tracker requires a unified full-stack architecture that supports server-side rendering for optimal performance and SEO/speed, server-side data fetching without exposing internal APIs, and interactive client components for financial forms and charts.
-- **Decision**: Adopt **Next.js 15+ with the App Router** and React 19.
+- **Context**: The application requires a fast, robust, asynchronous REST API backend capable of handling transactional financial mutations, serving analytical aggregations, and enforcing strict input validation.
+- **Decision**: Adopt **FastAPI** with Uvicorn as the ASGI server.
 - **Rationale**:
-  - React Server Components (RSC) fetch data directly from domain services without client network waterfalls.
-  - Server Actions provide a seamless, type-safe mutation model eliminating boilerplate REST controller layers.
-  - Built-in optimizations for bundling, streaming, dynamic imports, and security headers.
+  - Asynchronous concurrency provides high throughput for I/O bound database operations.
+  - Native integration with Pydantic ensures automatic request validation and type safety.
+  - Automatic interactive OpenAPI documentation (`/docs` and `/redoc`) simplifies API exploration and client development.
+  - Standardized dependency injection system simplifies database session lifecycle and authentication.
 - **Consequences**:
-  - Developers must understand the distinction between Server and Client components.
-  - Third-party chart components (Recharts) require `'use client'` wrappers.
+  - Frontend and backend are cleanly decoupled; the frontend interacts with the backend strictly via HTTP.
 
 ---
 
-## ADR-002: Dual Database Strategy (SQLite Local, PostgreSQL Production)
+## ADR-002: Frontend Dashboard Selection (Streamlit)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: For local MVP development, requiring users to install, configure, and maintain a local PostgreSQL or Docker daemon creates onboarding friction. However, enterprise production deployments require high concurrency, row-level security, connection pooling, and multi-tenant scaling.
-- **Decision**: Use **Prisma ORM** with a dual-database approach:
-  - **Local Development / MVP**: Embedded SQLite (`file:./dev.db`).
-  - **Production Deployment**: PostgreSQL 16+ via managed cloud services (Neon, Supabase, AWS RDS).
+- **Context**: We need an interactive, data-centric user interface capable of displaying rich financial tables, metrics, and charts with rapid development velocity and low maintenance overhead.
+- **Decision**: Adopt **Streamlit** for the frontend user interface.
 - **Rationale**:
-  - Prisma abstracts SQL dialect differences, allowing identical schema models to target both databases.
-  - SQLite requires zero configuration, zero cloud dependencies, and zero background services during local testing.
-  - PostgreSQL provides connection pooling (PgBouncer), concurrent write scalability, and robust ACID isolation.
+  - Python-native framework allows seamless integration with Pandas and Plotly.
+  - Rapid UI composition with built-in state management (`st.session_state`) and reactive execution.
+  - Built-in data caching mechanisms (`@st.cache_data`) optimize visual performance.
 - **Consequences**:
-  - Database schema must avoid SQLite-incompatible features (such as database-level enum types in SQLite, simulated via Prisma, or database-specific JSON functions).
-  - Migration script (`scripts/migrate-sqlite-to-pg.ts`) must be maintained to verify data fidelity during migration.
+  - Streamlit re-runs scripts on user interaction; state must be managed carefully using `st.session_state`.
+  - Streamlit must communicate with the database exclusively through the FastAPI REST client (`src/frontend/api_client.py`), maintaining strict architectural separation.
 
 ---
 
-## ADR-003: Monetary Representation Model (Integer Minor Units)
+## ADR-003: ORM & Migration Strategy (SQLAlchemy 2.0 & Alembic)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: IEEE 754 floating-point numbers inherently produce rounding inaccuracies (e.g., `0.1 + 0.2 = 0.30000000000000004`). In a financial application, floating-point drift can result in corrupted balances, failing ledger reconciliations, and loss of user trust.
-- **Decision**: Store and compute all monetary values as **integers in minor currency units (cents)**.
-  - Example: `$12.50` is stored and calculated as `1250`.
+- **Context**: The application requires type-safe relational data modeling, query composition, transaction control, and revision-controlled database schema migrations.
+- **Decision**: Adopt **SQLAlchemy 2.0** (using modern typed `Mapped[...]` and `mapped_column[...]` syntax) and **Alembic** for schema migrations.
 - **Rationale**:
-  - Exact arithmetic: integer addition and subtraction are 100% exact and free from floating-point distortion.
-  - High performance: integer math is natively supported and lightning-fast across all CPU architectures and database engines.
-  - Universal database compatibility: integer columns behave identically in SQLite, PostgreSQL, and MySQL.
+  - SQLAlchemy 2.0 provides fully typed ORM models, explicit transaction management, and an expressive query API.
+  - Parameterized queries eliminate SQL injection vulnerabilities.
+  - Alembic provides battle-tested schema migration version control supporting both SQLite and PostgreSQL.
 - **Consequences**:
-  - User-facing values must be converted to cents on input and formatted to currency strings on output.
-  - Dedicated formatting utility functions (`centsToDollars`, `dollarsToCents`) must be central and thoroughly unit-tested.
+  - Developers must use SQLAlchemy 2.0 style queries (`select()`, `session.execute()`) rather than legacy 1.x patterns.
 
 ---
 
-## ADR-004: UI Component Architecture (Tailwind CSS & shadcn/ui)
+## ADR-004: Dual Database Strategy (SQLite Local, PostgreSQL Production)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: We need a modern, visually appealing, accessible, and easily customizable design system without the overhead and bundle weight of heavy component libraries (like MUI or Ant Design).
-- **Decision**: Adopt **Tailwind CSS** combined with **shadcn/ui** (built on top of Radix UI primitives).
+- **Context**: For local development, requiring developers to configure a PostgreSQL instance creates friction. In production, enterprise concurrency, connection pooling, and multi-user scaling require a robust client-server RDBMS.
+- **Decision**: Support embedded **SQLite** (`data/finance.db`) for local development and **PostgreSQL 16+** for production deployments.
 - **Rationale**:
-  - Zero runtime style injection: Tailwind generates static CSS, maximizing runtime performance.
-  - Code ownership: shadcn/ui copies accessible, unstyled primitives into the codebase (`src/components/ui/`), giving full control over markup and styling.
-  - Built-in accessibility: Radix UI handles keyboard navigation, focus management, and ARIA attributes out of the box.
+  - SQLAlchemy abstracts SQL dialect differences, allowing identical ORM models to run on both engines.
+  - SQLite requires zero configuration and zero external processes.
+  - PostgreSQL provides high-concurrency ACID guarantees, connection pooling, and multi-user data isolation.
 - **Consequences**:
-  - Developers must follow consistent utility class conventions.
+  - Schema design must use engine-agnostic data types (avoiding SQLite-incompatible features).
+  - Migration script (`scripts/verify_pg_migration.py`) verifies data parity between engines.
 
 ---
 
-## ADR-005: Testing Suite Strategy (Vitest & Playwright)
+## ADR-005: Monetary Representation Model (Python Decimal & SQL Numeric)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: Financial calculations, ledger invariants, and user workflows require comprehensive automated testing with fast feedback loops for developers and reliable end-to-end verification.
-- **Decision**: Deploy **Vitest** for unit and integration testing, and **Playwright** for end-to-end (E2E) browser testing.
+- **Context**: Standard IEEE 754 floating-point numbers (`float`) introduce binary representation rounding errors (e.g., `0.1 + 0.2 = 0.30000000000000004`). In a financial system, this leads to ledger discrepancies and accounting corruption.
+- **Decision**: Use Python's built-in **`decimal.Decimal`** for all calculations and map columns to **`Numeric(18, 2)`** in SQLAlchemy.
 - **Rationale**:
-  - Vitest provides instant HMR, native TypeScript/ESM execution, and a Jest-compatible API without transform overhead.
-  - Playwright enables cross-browser automation (Chromium, WebKit, Firefox) with built-in tracing, video capture, and robust auto-wait assertions.
+  - Base-10 exact arithmetic eliminates rounding drift.
+  - Database-level `Numeric(18, 2)` constraints guarantee two decimal places of precision across both SQLite and PostgreSQL.
+  - Compliant with GAAP and financial auditing standards.
 - **Consequences**:
-  - Developers run unit tests during active coding (`npm run test`) and E2E tests before releases or phase gates (`npm run test:e2e`).
+  - Numeric inputs from forms and APIs must be parsed directly into `Decimal` objects (never cast via `float()`).
 
 ---
 
-## ADR-006: Schema Validation & Type Invariance (Zod)
+## ADR-006: Schema Validation & Settings Management (Pydantic v2)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: Runtime data entering from external boundaries (HTTP requests, URL search params, form submissions, CSV uploads) must be strictly validated to prevent malformed data or security vulnerabilities.
-- **Decision**: Adopt **Zod** as the single source of truth for runtime validation and static TypeScript type inference.
+- **Context**: Inputs from forms, JSON payloads, and environment variables must be validated at runtime to prevent malformed data or security vulnerabilities.
+- **Decision**: Adopt **Pydantic v2** for DTOs/schemas and **`pydantic-settings`** for environment variable management.
 - **Rationale**:
-  - Seamless integration with `react-hook-form` via `@hookform/resolvers/zod`.
-  - Type inference (`z.infer<typeof schema>`) eliminates duplicate interface definitions.
-  - Strict parsing strips unrecognised attributes, mitigating parameter injection attacks.
+  - Pydantic v2's Rust core (`pydantic-core`) delivers high validation performance.
+  - Strict type coercion rules and custom validators guarantee data invariants.
+  - Centralized `.env` loading and verification via `BaseSettings`.
 - **Consequences**:
-  - All form and API inputs must declare corresponding Zod schemas in `src/schemas/`.
+  - All API request and response models must be defined in `src/schemas/`.
 
 ---
 
-## ADR-007: Phased Implementation Lifecycle with Approval Gates
+## ADR-007: Data Analytics & Visualizations (Pandas & Plotly)
 
 - **Date**: 2026-11-15
 - **Status**: **ACCEPTED**
-- **Context**: Complex full-stack applications often suffer from scope creep, architectural drift, and half-implemented features when development lacks strict boundaries.
-- **Decision**: Establish an immutable **Nine-Phase Lifecycle** with mandatory stop-and-review approval gates at the conclusion of each phase.
+- **Context**: The user needs dynamic visual analytics (cash flow comparisons, category expense distributions, net worth trajectories) and bank statement import/export capabilities.
+- **Decision**: Adopt **Pandas** for analytical data processing and **Plotly** for interactive data visualization.
 - **Rationale**:
-  - Enforces systematic, verifiable progress where each phase is tested and stable before the next commences.
-  - Prevents premature application coding before infrastructure and architecture are sound.
-  - Ensures human-in-the-loop oversight and governance.
+  - Pandas provides fast in-memory filtering, grouping, time-series bucketing, and seamless CSV/Excel I/O.
+  - Plotly produces interactive, responsive charts with zoom, pan, and hover tooltips natively renderable in Streamlit via `st.plotly_chart`.
 - **Consequences**:
-  - Work must halt at the end of each phase until explicit user approval is granted.
+  - Heavy aggregations should be performed on cached DataFrames in Streamlit to avoid redundant API queries.
+
+---
+
+## ADR-008: Testing Suite Architecture (Pytest & HTTPX)
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: The application requires comprehensive automated testing covering unit calculations, API endpoints, database transactions, and user workflows.
+- **Decision**: Deploy **Pytest** with `pytest-asyncio` for unit/integration testing and **HTTPX** (`AsyncClient`) for API contract testing.
+- **Rationale**:
+  - Pytest provides concise test syntax, modular fixtures, and rich plugin support.
+  - HTTPX enables in-memory testing of FastAPI applications without network latency or port binding conflicts.
+- **Consequences**:
+  - All test files reside under `tests/` and adhere to strict naming conventions (`test_*.py`).
+
+---
+
+## ADR-009: Security & Supply-Chain Auditing (Bandit & pip-audit)
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Personal finance applications must guard against common web vulnerabilities, insecure coding practices, and supply-chain vulnerabilities in third-party packages.
+- **Decision**: Integrate **Bandit** for static code analysis (SAST) and **pip-audit** for dependency vulnerability scanning.
+- **Rationale**:
+  - Bandit inspects Python ASTs to flag hardcoded secrets, SQL injection risks, and insecure library usage.
+  - pip-audit verifies that installed packages have no active CVE entries in the PyPA vulnerability database.
+- **Consequences**:
+  - Both tools must run cleanly in local pre-commit checks and CI pipelines before any phase completion sign-off.
+
+---
+
+## ADR-010: Phased Implementation Lifecycle with Approval Gates
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Large engineering projects risk architectural drift and unvetted implementations without structured phase boundaries.
+- **Decision**: Enforce a strict **Nine-Phase Lifecycle** with mandatory human approval gates at the end of each phase.
+- **Rationale**:
+  - Ensures each layer (scaffolding, database, services, API, UI, analytics, testing, deployment) is stable and certified before the next starts.
+  - Prevents premature application feature coding.
+  - Guarantees human-in-the-loop governance.
+- **Consequences**:
+  - All development halts at the end of each phase until explicit user approval is granted.

@@ -2,93 +2,100 @@
 
 > **DOCUMENT**: `docs/SECURITY.md`  
 > **STATUS**: ENFORCED & ACTIVE  
-> **PHASE**: Phase 0 — Foundation and Documentation
+> **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Pydantic v2, Bandit, pip-audit)  
+> **CURRENT PHASE**: Phase 0 — Foundation and Documentation
 
 ---
 
 ## 1. Security Overview & Threat Model
 
-Financial management applications handle sensitive personal data. A breach or integrity violation could expose private net worth, transaction history, and banking relationships, or corrupt balance records.
-
-This security policy defines strict preventive, detective, and corrective controls across every layer of the application lifecycle.
+Financial management systems handle confidential personal and financial records. The architecture treats security as a foundational invariant, establishing defense-in-depth across the presentation, API, service, and persistence layers.
 
 ---
 
 ## 2. OWASP Top 10 Mitigation Matrix
 
-| OWASP Risk | Threat Description | Architectural Mitigation in Personal Finance Tracker |
+| OWASP Risk | Threat Description | Architectural Mitigation in Python + SQL Stack |
 | :--- | :--- | :--- |
-| **A01: Broken Access Control** | Unauthorized user accesses another user's accounts or financial ledger. | **Strict Tenant Isolation**: Every database query through Prisma MUST enforce user ownership (`where: { userId: currentUserId, id: resourceId }`). Server Actions re-verify session authenticity before every write. |
-| **A02: Cryptographic Failures** | Exposure of passwords, sensitive tokens, or unencrypted data in transit. | **Strong Cryptography**: TLS 1.3 enforced in production. Session cookies use `Secure`, `HttpOnly`, `SameSite=Strict`. Password hashing utilizes **Argon2id** with calibrated memory and iteration costs. |
-| **A03: Injection** | SQL, NoSQL, or Command injection via malicious form or query input. | **Prisma Parameterized Queries**: Zero raw SQL string concatenation. All database interactions occur via Prisma ORM parameterized statements. Zod strictly sanitizes and validates all incoming fields. |
-| **A04: Insecure Design** | Flawed business logic enabling race conditions or money creation. | **Double-Entry Balance Conservation & Atomic Transactions**: Inter-account transfers and balance changes are executed within atomic `$transaction` blocks. Negative values are strictly checked against business invariants. |
-| **A05: Security Misconfiguration** | Insecure default configs, unhardened headers, exposed debug endpoints. | **Security Headers**: Production builds configure strict HTTP response headers via `next.config.js`: `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Strict-Transport-Security`. |
-| **A06: Vulnerable Components** | Dependencies with known CVEs or supply-chain malware. | **Automated Audits**: Mandatory `npm audit` and **OSV-Scanner** integration in CI pipelines. Dependency approval process strictly enforced before installation. |
-| **A07: Identification & Auth Failures** | Brute force attacks, session hijacking, or credential stuffing. | **Rate Limiting & Secure Sessions**: In-memory / Redis rate limiting on authentication routes; session token invalidation upon password reset or logout; short idle session timeouts. |
-| **A08: Software & Data Integrity Failures** | Unverified packages or tampering with serialized data. | **Immutable Lockfiles**: `package-lock.json` enforced via `npm ci`. Strict SHA-512 package integrity verification. Tamper-evident audit logging for financial state changes. |
-| **A09: Logging & Monitoring Failures** | Breaches undetected due to absent or inadequate logs. | **Structured Security Logging**: Centralized logging for authentication events, permission denials, and critical financial mutations. Zero PII/financial secrets in log outputs. |
-| **A10: Server-Side Request Forgery (SSRF)** | Exploitation of export/import or webhook services to probe internal networks. | **Disabled Outbound Fetching**: The application does not fetch arbitrary user-supplied URLs. CSV/JSON imports are performed strictly via uploaded file streams with size and MIME validation. |
+| **A01: Broken Access Control** | Unauthorized user accesses another user's accounts, transactions, or budgets. | **Strict Tenant Query Scoping**: Every SQLAlchemy query executes with a mandatory `where(Model.user_id == current_user.id)` predicate. FastAPI dependency injection ensures unauthenticated or cross-tenant requests return 401 or 404 immediately. |
+| **A02: Cryptographic Failures** | Exposure of passwords, sensitive tokens, or unencrypted data in transit. | **Strong Cryptography**: TLS 1.3 enforced in production. Passwords hashed using **Argon2id** (or bcrypt) with calibrated memory and iteration costs. JWT tokens signed with strong secrets (`HS256` or `Ed25519`). |
+| **A03: Injection** | SQL injection, command injection, or script injection via malformed input. | **SQLAlchemy Parameterization & Pydantic**: 100% of database queries use SQLAlchemy ORM or parameterized Core statements. Zero raw SQL string concatenation. Pydantic v2 strips unexpected fields and validates data types. |
+| **A04: Insecure Design** | Flawed business logic enabling unauthorized balance generation or race conditions. | **Double-Entry Balance Conservation & Atomic DB Transactions**: Inter-account transfers execute within atomic `session.begin()` blocks. Floating-point arithmetic is forbidden; all calculations use `decimal.Decimal`. |
+| **A05: Security Misconfiguration** | Insecure default configs, unhardened headers, exposed debug endpoints. | **Security Headers & CORS**: FastAPI configures explicit trusted CORS origins. In production, security headers (`Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`) are enforced. |
+| **A06: Vulnerable Components** | Dependencies with known CVEs or supply-chain malware. | **Automated Audits**: Mandatory execution of **`pip-audit`** in CI pipelines to scan against the PyPI vulnerability database. Dependency additions require strict vetting. |
+| **A07: Identification & Auth Failures** | Brute force attacks, session hijacking, or credential stuffing. | **Rate Limiting & Secure JWT**: Rate limiting on `/api/v1/auth/*` routes; explicit token expiration; revocation tracking; short token lifetimes. |
+| **A08: Software & Data Integrity Failures** | Unverified packages or tampering with serialized data. | **Pinning & Hash Verification**: Dependencies pinned in `pyproject.toml` or `requirements.txt` with SHA-256 hashes generated by `uv` / `pip-tools`. Immutable audit log records for financial state modifications. |
+| **A09: Security Logging & Monitoring Failures** | Breaches undetected due to missing or inadequate logs. | **Structured Security Logging**: Centralized logging for authentication failures, permission denials, and critical financial mutations. Zero PII/financial secrets in log outputs. |
+| **A10: Server-Side Request Forgery (SSRF)** | Exploitation of export/import or webhook services to probe internal networks. | **Disabled Outbound Network Calls**: The backend does not make outbound network requests based on user input. CSV and Excel imports are processed strictly in-memory from uploaded file buffers. |
 
 ---
 
-## 3. Dependency Supply-Chain Security & Approval Policy
+## 3. Static Application Security Testing (SAST) with Bandit
 
-To protect against malicious supply chain attacks, typojquatting, and compromised packages:
+**Bandit** is integrated into the development workflow to scan Python Abstract Syntax Trees (AST) for common security weaknesses:
 
-### Strict Dependency Approval Rules
-No package may be introduced into `package.json` without fulfilling all criteria:
-1. **Established Reputation**: Minimum of 1,000+ weekly npm downloads.
-2. **Active Maintenance**: Latest commit/release within the previous 12 months.
-3. **Clean Security History**: Zero unresolved High or Critical CVEs.
-4. **Minimal Transitive Footprint**: Avoid packages that bring hundreds of unvetted sub-dependencies.
-5. **Architectural Approval**: Any new dependency must be formally documented in `docs/DECISIONS.md`.
+```bash
+# Run Bandit across the entire Python codebase
+bandit -r src/ -ll -ii
+```
 
-### Vulnerability Scanning Protocol
-- **npm audit**:
-  ```bash
-  npm audit --audit-level=high
-  ```
-  Any detected high or critical vulnerability fails the build immediately.
-- **OSV-Scanner**:
-  The Google OSV-Scanner checks against the open-source vulnerability database:
-  ```bash
-  osv-scanner --lockfile=package-lock.json
-  ```
-  Run periodically and as a pre-commit / CI gate.
+### Prohibited Code Constructs Flagged by Bandit
+1. **`B608` (SQL Injection)**: Direct string formatting into SQL queries. (Must use SQLAlchemy parameterized statements).
+2. **`B105`, `B106`, `B107` (Hardcoded Passwords/Tokens)**: Hardcoded secrets in code. (Must use Pydantic `BaseSettings` / environment variables).
+3. **`B301`, `B403` (Insecure Deserialization)**: Usage of `pickle` is strictly forbidden. (Use JSON or Pydantic models).
+4. **`B311` (Weak Randomness)**: Use `secrets` instead of `random` for cryptographic tokens.
+5. **`B110`, `B112` (Try-Except-Pass)**: Silent exception suppression is forbidden.
 
 ---
 
-## 4. Environment Variables & Secret Management
+## 4. Dependency Auditing with pip-audit
 
-1. **Strict Segregation**:
-   - `.env.example` contains variable names and dummy values. This file is tracked in Git.
-   - `.env`, `.env.local`, `.env.production` are strictly ignored by `.gitignore` and must NEVER be committed.
-2. **Runtime Validation**:
-   - Environment variables are validated at application startup using a dedicated Zod schema (`src/lib/env.ts`).
-   - If a mandatory secret (e.g., `DATABASE_URL`, `AUTH_SECRET`) is missing or invalid, the application immediately aborts with a descriptive error.
-3. **Production Secret Storage**:
-   - Production secrets are injected via secure platform secret managers (e.g., Vercel Environment Variables, AWS Secrets Manager, GitHub Secrets).
+To prevent supply-chain vulnerabilities:
+```bash
+# Scan all installed dependencies and locked requirement files
+pip-audit --desc
+```
+- **Build Failure Gate**: Any dependency with a known **High** or **Critical** severity vulnerability fails the CI build immediately.
+- **Dependency Approval Criteria**:
+  1. Minimum 1,000+ weekly downloads on PyPI.
+  2. Active maintenance within the last 12 months.
+  3. Clean security track record with zero unpatched CVEs.
+  4. Explicit approval documented in `docs/DECISIONS.md`.
 
 ---
 
-## 5. Database Access & Financial Data Protection
+## 5. Environment Variables & Secret Management
+
+1. **Pydantic BaseSettings Integration**:
+   - Environment variables are loaded and validated at boot using `pydantic-settings`:
+   ```python
+   from pydantic_settings import BaseSettings, SettingsConfigDict
+   from pydantic import SecretStr
+
+   class Settings(BaseSettings):
+       model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+       
+       DATABASE_URL: str = "sqlite+aiosqlite:///./data/finance.db"
+       SECRET_KEY: SecretStr
+       ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+       ENVIRONMENT: str = "development"
+   ```
+2. **Strict File Isolation**:
+   - `.env.example` provides non-sensitive template configurations and is tracked in Git.
+   - `.env`, `.env.production`, and any files containing actual keys are strictly excluded via `.gitignore`.
+3. **Production Secret Injection**:
+   - In production environments (Docker, AWS, GCP, Render), secrets must be injected as environment variables via cloud secret managers (e.g., AWS Secrets Manager, GitHub Secrets).
+
+---
+
+## 6. Database Access & Financial Data Protection
 
 1. **Principle of Least Privilege**:
-   - In production PostgreSQL, the application connects using a dedicated database role with permissions restricted strictly to `SELECT`, `INSERT`, `UPDATE`, `DELETE` on application tables. Schema modification permissions (`ALTER`, `DROP`) are reserved for migration scripts.
-2. **Protection Against Floating-Point Errors**:
-   - Floating-point representations (`0.1 + 0.2 = 0.30000000000000004`) lead to balance drift and financial accounting fraud.
-   - **Mandate**: All monetary amounts are stored as **integer minor units** (e.g., USD cents: `$15.99` $\to$ `1599`) or database `Decimal` types.
-3. **Database Backups & Snapshot Security**:
-   - Automated daily database backups must be encrypted at rest using AES-256.
-   - Database connection strings in production must enforce TLS (`sslmode=require`).
-
----
-
-## 6. Security Incident Response Protocol
-
-In the event a security flaw or CVE is discovered:
-1. **Assess Impact**: Determine affected versions, data exposure risks, and exploitation feasibility.
-2. **Containment**: Temporarily disable vulnerable endpoints or rollback the deployment if active exploitation occurs.
-3. **Remediation**: Apply upstream patches, update dependencies, or implement a targeted code fix.
-4. **Verification**: Execute `npm audit`, unit security test suites, and Playwright regressions.
-5. **Post-Mortem**: Document root cause, resolution, and preventative safeguards in `docs/CHANGELOG.md` and `docs/DECISIONS.md`.
+   - In production PostgreSQL, the application connects via a dedicated application role granted only `SELECT`, `INSERT`, `UPDATE`, `DELETE`.
+   - DDL schema modifications are restricted strictly to Alembic migration executions.
+2. **Monetary Precision Defense**:
+   - IEEE 754 floating-point inaccuracies represent a security and financial integrity threat.
+   - All financial math is protected by Python `decimal.Decimal` and database `Numeric(18, 2)` constraints.
+3. **Database Backup Security**:
+   - Automated database backups must be encrypted at rest using AES-256.
+   - Database connection strings must enforce SSL encryption (`sslmode=require`).
