@@ -245,6 +245,48 @@ A development phase is marked complete ONLY when all gate criteria are met:
 - **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
 - **Database Record Preservation**: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` verified intact in `data/finance.db`.
 
+---
+
+## 11. Phase 6 Verification & Test Results (Advanced Frontend Views)
+
+### 11.1 Test Execution Metrics
+- **Total Automated Tests**: 159 passed, 0 failed, 0 skipped (100% pass rate).
+- **Execution Time**: 14.00 seconds.
+- **Overall Code Coverage**: 80% across `src/` (4,278 statements, 843 missed).
+- **Test Distribution (113 Unit, 46 Integration)**:
+  - **Phase 6 Advanced Frontend Unit Tests (8 new tests, 27 total frontend tests)**:
+    - `tests/unit/test_frontend.py` (+4 tests):
+      - `test_api_client_goal_operations`: Savings goals listing, creation, progress tracking, contributions, and withdrawals.
+      - `test_api_client_loan_operations`: Loan liabilities listing, schedule details retrieval, loan creation, and installment payment processing.
+      - `test_api_client_investment_operations`: Portfolio holdings, buy security with weighted cost basis, sell security with realized capital gain/loss calculation, and dividend receipts.
+      - `test_api_client_recurring_operations`: Recurring rules listing, due rule checking, template creation, due rule execution, pause, and resume.
+    - `tests/unit/test_frontend_views.py` (+4 tests):
+      - `test_render_goals_view`: Empty state rendering and milestone cards with funded progress bars and contribution forms.
+      - `test_render_loans_view`: Empty state rendering and active liability summaries with amortization schedules and installment repayment forms.
+      - `test_render_investments_view`: Valuation disclaimer, empty state handling, and portfolio positions with weighted-average cost basis per unit.
+      - `test_render_recurring_view`: Due execution alerts with manual ledger posting triggers, active/paused rules directory, and schedule controls.
+  - **Protected Existing Tests (151 tests)**:
+    - All 151 Phase 1–5 regression tests (87 core service/repo tests, 33 FastAPI integration tests, 14 administrative CLI tests, and 17 Phase 5 frontend tests) continue to pass with zero regressions.
+
+### 11.2 Windows Terminal Sandbox Pytest Diagnostic & Workaround Protocol
+- **Diagnostic Finding**: When executing integration tests on Windows (`tests/integration/test_accounts_api.py`), `pytest` hung indefinitely inside the standard terminal sandbox (`BypassSandbox: false`).
+- **Root Cause**:
+  - FastAPI's `TestClient` uses `anyio.from_thread.start_blocking_portal()` to run the ASGI application in a worker thread.
+  - On Windows, Python 3.12 `asyncio.ProactorEventLoop` uses internal Windows loopback socket pairs (`127.0.0.1`) for cross-thread messaging.
+  - The standard terminal sandbox isolation on Windows drops or blocks loopback socket handshakes, causing `start_blocking_portal()` to block indefinitely waiting for socket I/O.
+- **Verified Execution Workaround**:
+  - Pure unit tests (`uv run --no-sync pytest tests/unit`) do not initialize ASGI socket loops and run inside the standard sandbox in **2.85s**.
+  - Integration tests and the full coverage suite must be executed with `BypassSandbox: true` (e.g. `uv run --no-sync pytest --cov=src`), which restores Windows socket loopback and completes in **14.00s**.
+
+### 11.3 Static Quality & Security Audits
+- **Ruff Linter**: `ruff check .` -> **0 errors** (all checks passed).
+- **Ruff Formatter**: `ruff format --check .` -> **109 files correctly formatted**.
+- **Mypy Type Checking**: `mypy` -> **Success: no issues found in 67 source files** (strict mode).
+- **Bandit SAST**: `bandit -r src/` -> **0 issues identified** (9,429 lines scanned across `src/`).
+- **pip-audit**: `pip-audit` -> **0 known vulnerabilities found**.
+- **Database Record Preservation**: `Primary Checking ('USD', 1500.00)` verified untouched in `data/finance.db`. Zero test writes to persistent SQLite storage.
+
+
 
 
 

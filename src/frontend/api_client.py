@@ -388,5 +388,321 @@ class ApiClient:
             logger.error(f"Error creating budget: {e}")
             return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
 
+    # =========================================================================
+    # SAVINGS GOAL ENDPOINTS
+    # =========================================================================
+
+    def list_goals(self) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch all savings goals configured for the user."""
+        url = f"{self.base_url}/goals"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing savings goals: {e}")
+            return False, []
+
+    def create_goal(self, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """Create a new savings goal milestone."""
+        url = f"{self.base_url}/goals"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error creating savings goal: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def get_goal_progress(self, goal_id: str) -> tuple[bool, dict[str, Any]]:
+        """Retrieve progress percentage and remaining amount for a savings goal."""
+        url = f"{self.base_url}/goals/{goal_id}/progress"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                if response.status_code == 200:
+                    return True, response.json().get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error fetching goal progress {goal_id}: {e}")
+            return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
+    def contribute_to_goal(
+        self, goal_id: str, amount: str, notes: str | None = None
+    ) -> tuple[bool, dict[str, Any]]:
+        """Record a contribution towards achieving a savings goal."""
+        url = f"{self.base_url}/goals/{goal_id}/contribute"
+        try:
+            with self._get_client() as client:
+                response = client.post(
+                    url,
+                    json={"amount": amount, "notes": notes},
+                    headers=self._get_headers(),
+                )
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error contributing to goal {goal_id}: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def withdraw_from_goal(self, goal_id: str, amount: str) -> tuple[bool, dict[str, Any]]:
+        """Withdraw funds from a savings goal balance."""
+        url = f"{self.base_url}/goals/{goal_id}/withdraw"
+        try:
+            with self._get_client() as client:
+                response = client.post(
+                    url,
+                    json={"amount": amount},
+                    headers=self._get_headers(),
+                )
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error withdrawing from goal {goal_id}: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    # =========================================================================
+    # LOAN & DEBT ENDPOINTS
+    # =========================================================================
+
+    def list_loans(self) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch all debt obligations and liabilities for the authenticated user."""
+        url = f"{self.base_url}/loans"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing loans: {e}")
+            return False, []
+
+    def get_loan(self, loan_id: str) -> tuple[bool, dict[str, Any]]:
+        """Fetch details of a single loan liability including its amortization schedule."""
+        url = f"{self.base_url}/loans/{loan_id}"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                if response.status_code == 200:
+                    return True, response.json().get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error fetching loan details {loan_id}: {e}")
+            return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
+    def create_loan(self, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """Record a new loan liability and generate monthly amortization schedules."""
+        url = f"{self.base_url}/loans"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error creating loan: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def record_loan_payment(
+        self, loan_id: str, payment_number: int, transaction_id: str | None = None
+    ) -> tuple[bool, dict[str, Any]]:
+        """Record an installment payment for a loan liability."""
+        url = f"{self.base_url}/loans/{loan_id}/payment"
+        try:
+            with self._get_client() as client:
+                response = client.post(
+                    url,
+                    json={"payment_number": payment_number, "transaction_id": transaction_id},
+                    headers=self._get_headers(),
+                )
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error recording loan payment: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    # =========================================================================
+    # INVESTMENT ENDPOINTS
+    # =========================================================================
+
+    def list_holdings(self, account_id: str | None = None) -> tuple[bool, list[dict[str, Any]]]:
+        """Retrieve active portfolio security holdings and cost basis details."""
+        url = f"{self.base_url}/investments/holdings"
+        params: dict[str, Any] = {}
+        if account_id:
+            params["account_id"] = account_id
+
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing investment holdings: {e}")
+            return False, []
+
+    def buy_security(self, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """Record a security purchase, updating holdings with weighted-average cost basis."""
+        url = f"{self.base_url}/investments/buy"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error buying security: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def sell_security(self, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """Process a security liquidation and calculate realized capital gains/losses."""
+        url = f"{self.base_url}/investments/sell"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error selling security: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def record_dividend(self, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """Record dividend earnings from a held security position."""
+        url = f"{self.base_url}/investments/dividend"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error recording dividend: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    # =========================================================================
+    # RECURRING TRANSACTION ENDPOINTS
+    # =========================================================================
+
+    def list_recurring_rules(self, active_only: bool = False) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch recurring schedule rules."""
+        url = f"{self.base_url}/recurring"
+        try:
+            with self._get_client() as client:
+                response = client.get(
+                    url,
+                    params={"active_only": str(active_only).lower()},
+                    headers=self._get_headers(),
+                )
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing recurring rules: {e}")
+            return False, []
+
+    def list_due_recurring_rules(
+        self, as_of_date: str | None = None
+    ) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch recurring rules due for ledger execution."""
+        url = f"{self.base_url}/recurring/due"
+        params: dict[str, Any] = {}
+        if as_of_date:
+            params["as_of_date"] = as_of_date
+
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing due recurring rules: {e}")
+            return False, []
+
+    def create_recurring_rule(self, payload: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+        """Create a recurring transaction schedule template."""
+        url = f"{self.base_url}/recurring"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error creating recurring rule: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def execute_due_rule(
+        self, rule_id: str, execution_date: str | None = None
+    ) -> tuple[bool, dict[str, Any]]:
+        """Trigger execution of a due recurring rule, creating a ledger transaction."""
+        url = f"{self.base_url}/recurring/{rule_id}/execute"
+        params: dict[str, Any] = {}
+        if execution_date:
+            params["execution_date"] = execution_date
+
+        try:
+            with self._get_client() as client:
+                response = client.post(url, params=params, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error executing recurring rule {rule_id}: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def pause_recurring_rule(self, rule_id: str) -> tuple[bool, dict[str, Any]]:
+        """Deactivate a recurring rule schedule."""
+        url = f"{self.base_url}/recurring/{rule_id}/pause"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error pausing recurring rule {rule_id}: {e}")
+            return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
+    def resume_recurring_rule(self, rule_id: str) -> tuple[bool, dict[str, Any]]:
+        """Reactivate a paused recurring rule schedule."""
+        url = f"{self.base_url}/recurring/{rule_id}/resume"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error resuming recurring rule {rule_id}: {e}")
+            return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
 
 api_client = ApiClient()

@@ -9,11 +9,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned for Phase 6 (Streamlit Advanced Feature Pages)
-- Implement Savings Goals milestone tracking, periodic contributions, and target fund progress bars.
-- Implement Loans & Liabilities management with amortization instalment views and debt paydown curves.
-- Implement Investment portfolio tracking with asset allocation, cost basis summaries, and dividend logs.
-- Implement Recurring transaction rule management with execution controls and scheduling status.
+### Planned for Phase 7 (Advanced Analytics, Reporting & Insights)
+- Implement Financial Analytics Engine: cash flow forecasting, net worth trajectories, and spending trends.
+- Implement advanced multi-period reporting and exportable financial summary packets.
+- Implement heuristic / rule-based anomaly detection for unusual charges and spending spikes.
+
+---
+
+## [0.7.0] - 2026-11-15 (Phase 6: Streamlit Advanced Feature Pages)
+
+### Added
+- **Savings Goals & Milestones (`src/frontend/views/goals.py`)**:
+  - Live milestone progress tracking with target amount, current funded amount, remaining balance, and visual progress bars (`st.progress`).
+  - Milestone status badges (`ACHIEVED`, `IN PROGRESS`).
+  - Goal contribution form with decimal validation and optional notes via `POST /api/v1/goals/{id}/contribute`.
+  - Goal withdrawal form with balance boundary enforcement via `POST /api/v1/goals/{id}/withdraw`.
+  - Savings goal creation form with target amount, currency selection, target date, and notes via `POST /api/v1/goals`.
+- **Loans & Debt Liabilities (`src/frontend/views/loans.py`)**:
+  - Loan liability summaries displaying lender, principal, remaining balance, annual interest rate, term duration, and monthly EMI.
+  - Interactive amortization schedule viewer displaying installment breakdown: principal component, interest component, total payment, and remaining principal.
+  - Installment repayment form selecting unpaid payment numbers via `POST /api/v1/loans/{id}/payment`.
+  - Loan obligation creation form binding liabilities to user accounts via `POST /api/v1/loans`.
+- **Investment Portfolio & Holdings (`src/frontend/views/investments.py`)**:
+  - Prominent architectural valuation disclaimer emphasizing that positions reflect historical weighted-average cost basis rather than live market quotes.
+  - Holdings directory displaying units held (4 decimal precision), cost basis per unit, and total acquisition cost basis.
+  - Security purchase form via `POST /api/v1/investments/buy`.
+  - Security liquidation form with unit sufficiency check and real-time realized capital gains/losses breakdown via `POST /api/v1/investments/sell`.
+  - Dividend income logging form via `POST /api/v1/investments/dividend`.
+- **Recurring Transaction Rules (`src/frontend/views/recurring.py`)**:
+  - Proactive due executions alert banner highlighting transactions that have reached scheduled recurrence dates.
+  - Manual execution triggers generating verified double-entry ledger postings via `POST /api/v1/recurring/{id}/execute`.
+  - Recurring rules directory displaying frequency, intervals, amounts, and next occurrence dates.
+  - One-click pause and resume schedule toggles via `POST /api/v1/recurring/{id}/pause` and `resume`.
+  - Recurring template creation form supporting Daily, Weekly, Biweekly, Monthly, Quarterly, and Yearly schedules via `POST /api/v1/recurring`.
+- **Expanded Navigation & Views (`src/frontend/app.py`, `src/frontend/views/__init__.py`)**:
+  - Integrated all 9 application views into sidebar navigation: Dashboard, Accounts, Transactions, Budgets, Savings Goals, Loans & Debts, Investments, Recurring Rules, and Settings.
+- **ApiClient Advanced Method Extensions (`src/frontend/api_client.py`)**:
+  - Added 17 authenticated endpoints covering goals, loans, investments, and recurring rules with Bearer header injection and error handling.
+- **Automated Test Suite Expansion (`tests/unit/test_frontend.py`, `tests/unit/test_frontend_views.py`)**:
+  - Added 8 comprehensive unit tests covering all new ApiClient methods and view rendering functions.
+  - Full test suite expanded to 159 passing tests with 80% coverage.
+
+### Fixed
+- **Windows Terminal Sandbox Pytest Workaround**:
+  - Identified and documented root cause of integration test hangs inside restricted Windows sandboxes due to AnyIO/Proactor loopback socket blocking.
+  - Verified unsandboxed execution protocol (`BypassSandbox: true`), enabling all 159 tests to pass in 14.0 seconds.
+- **Recurring View Category Dependency Alignment**:
+  - Removed extraneous `list_categories` call from `src/frontend/views/recurring.py` to match backend contract where `category_id` is purely optional.
 
 ---
 

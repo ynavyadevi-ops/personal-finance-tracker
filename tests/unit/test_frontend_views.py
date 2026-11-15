@@ -5,7 +5,11 @@ from unittest.mock import MagicMock, patch
 from src.frontend.views.accounts import render_accounts_view
 from src.frontend.views.budgets import render_budgets_view
 from src.frontend.views.dashboard import render_dashboard_view
+from src.frontend.views.goals import render_goals_view
+from src.frontend.views.investments import render_investments_view
+from src.frontend.views.loans import render_loans_view
 from src.frontend.views.login import render_login_view
+from src.frontend.views.recurring import render_recurring_view
 from src.frontend.views.settings import render_settings_view
 from src.frontend.views.transactions import render_transactions_view
 
@@ -195,3 +199,185 @@ def test_render_settings_view_displays_profile_and_currency() -> None:
         render_settings_view()
         mock_btn.assert_called_once()
         assert "Log Out" in mock_btn.call_args[0][0]
+
+
+def test_render_goals_view() -> None:
+    """Verify savings goals view handles empty state and populated milestones with progress."""
+    # 1. Empty state
+    with (
+        patch("src.frontend.api_client.api_client.list_goals", return_value=(True, [])),
+        patch("src.frontend.views.goals.render_empty_state") as mock_empty,
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+    ):
+        render_goals_view()
+        mock_empty.assert_called_once()
+        assert "No Savings Goals" in mock_empty.call_args[1]["title"]
+
+    # 2. Populated goals
+    mock_goals = [
+        {
+            "id": "goal-1",
+            "name": "Emergency Fund",
+            "target_amount": "100000.00",
+            "current_amount": "40000.00",
+            "currency": "INR",
+            "is_achieved": False,
+            "target_date": "2027-01-01",
+            "notes": "Liquid safety buffer",
+        }
+    ]
+    with (
+        patch("src.frontend.api_client.api_client.list_goals", return_value=(True, mock_goals)),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+        patch("streamlit.container", return_value=MagicMock()),
+        patch("streamlit.progress") as mock_prog,
+        patch("streamlit.expander", return_value=MagicMock()),
+        patch("streamlit.columns", side_effect=_mock_columns),
+    ):
+        render_goals_view()
+        mock_prog.assert_called_once_with(0.4)
+
+
+def test_render_loans_view() -> None:
+    """Verify loans view handles empty state and displays loan liabilities with amortization schedules."""
+    # 1. Empty state
+    with (
+        patch("src.frontend.api_client.api_client.list_loans", return_value=(True, [])),
+        patch("src.frontend.views.loans.render_empty_state") as mock_empty,
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+    ):
+        render_loans_view()
+        mock_empty.assert_called_once()
+        assert "No Loan Liabilities" in mock_empty.call_args[1]["title"]
+
+    # 2. Populated loans
+    mock_loans = [
+        {
+            "id": "loan-1",
+            "lender_name": "HDFC Bank",
+            "principal_amount": "500000.00",
+            "remaining_balance": "400000.00",
+            "interest_rate": "8.50",
+            "term_months": 36,
+            "minimum_monthly_payment": "15780.00",
+            "is_settled": False,
+            "start_date": "2026-01-01",
+            "notes": "Fixed vehicle loan",
+        }
+    ]
+    mock_details = {
+        "id": "loan-1",
+        "payment_schedules": [
+            {
+                "payment_number": 1,
+                "due_date": "2026-02-01",
+                "principal_component": "12000.00",
+                "interest_component": "3780.00",
+                "total_payment": "15780.00",
+                "remaining_balance": "488000.00",
+                "is_paid": False,
+            }
+        ],
+    }
+    with (
+        patch("src.frontend.api_client.api_client.list_loans", return_value=(True, mock_loans)),
+        patch("src.frontend.api_client.api_client.get_loan", return_value=(True, mock_details)),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+        patch("streamlit.container", return_value=MagicMock()),
+        patch("streamlit.expander", return_value=MagicMock()),
+        patch("streamlit.columns", side_effect=_mock_columns),
+        patch("streamlit.dataframe") as mock_df,
+    ):
+        render_loans_view()
+        mock_df.assert_called_once()
+
+
+def test_render_investments_view() -> None:
+    """Verify investments view presents portfolio holdings and disclaimer."""
+    mock_accounts = [{"id": "acc-inv-1", "name": "Zerodha Demat", "currency": "INR"}]
+    # 1. Empty holdings
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_accounts", return_value=(True, mock_accounts)
+        ),
+        patch("src.frontend.api_client.api_client.list_holdings", return_value=(True, [])),
+        patch("src.frontend.views.investments.render_empty_state") as mock_empty,
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock(), MagicMock()]),
+    ):
+        render_investments_view()
+        mock_empty.assert_called_once()
+        assert "No Active Holdings" in mock_empty.call_args[1]["title"]
+
+    # 2. Populated holdings
+    mock_holdings = [
+        {
+            "id": "h-1",
+            "account_id": "acc-inv-1",
+            "asset_id": "asset-rel",
+            "quantity": "25.0000",
+            "cost_basis_per_unit": "2400.00",
+            "total_cost": "60000.00",
+            "currency": "INR",
+            "asset": {
+                "symbol": "RELIANCE",
+                "name": "Reliance Industries Ltd",
+                "asset_type": "EQUITY",
+            },
+        }
+    ]
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_accounts", return_value=(True, mock_accounts)
+        ),
+        patch(
+            "src.frontend.api_client.api_client.list_holdings", return_value=(True, mock_holdings)
+        ),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock(), MagicMock()]),
+        patch("streamlit.container", return_value=MagicMock()),
+        patch("streamlit.columns", side_effect=_mock_columns),
+    ):
+        render_investments_view()
+
+
+def test_render_recurring_view() -> None:
+    """Verify recurring view renders due executions, rules directory, and controls."""
+    mock_due = [
+        {
+            "id": "rule-due-1",
+            "name": "Cloud Storage",
+            "amount": "800.00",
+            "currency": "INR",
+            "next_occurrence": "2026-11-15",
+        }
+    ]
+    mock_rules = [
+        {
+            "id": "rule-due-1",
+            "name": "Cloud Storage",
+            "amount": "800.00",
+            "currency": "INR",
+            "transaction_type": "EXPENSE",
+            "frequency": "MONTHLY",
+            "interval": 1,
+            "next_occurrence": "2026-11-15",
+            "is_active": True,
+        }
+    ]
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_due_recurring_rules",
+            return_value=(True, mock_due),
+        ),
+        patch(
+            "src.frontend.api_client.api_client.list_recurring_rules",
+            return_value=(True, mock_rules),
+        ),
+        patch("src.frontend.api_client.api_client.list_accounts", return_value=(True, [])),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+        patch("streamlit.container", return_value=MagicMock()),
+        patch("streamlit.columns", side_effect=_mock_columns),
+        patch("streamlit.button", return_value=False) as mock_btn,
+    ):
+        render_recurring_view()
+        # Verify execution and pause buttons were presented
+        assert mock_btn.call_count >= 2

@@ -373,6 +373,31 @@
   - Frontend execution requires an active FastAPI backend process.
   - Public password enrollment is strictly prohibited in the UI; legacy account enrollment remains restricted to the local administrative CLI.
 
+---
+
+## ADR-021: Phase 6 Advanced Feature Views, Historical Cost Basis Valuation, and Windows Loopback Test Protocol
+
+- **Date**: 2026-11-15
+- **Status**: **ACCEPTED**
+- **Context**: Phase 6 requires implementing dedicated Streamlit frontend views for specialized financial management: Savings Goals milestones, Loans and Debt amortization liabilities, Investment portfolio tracking, and Recurring transaction rules. During test verification on Windows, integration tests hung in the standard restricted terminal sandbox environment.
+- **Decision**:
+  1. **Savings Goals Milestones**: Build `src/frontend/views/goals.py` exposing target milestones, visual funded progress bars (`st.progress`), dedicated contribution forms, withdrawal forms, and milestone creation. Contributions and withdrawals are presented as balance movements rather than income/expense.
+  2. **Loan Amortization Liabilities**: Build `src/frontend/views/loans.py` presenting liability summaries, full installment amortization schedules (principal component, interest component, remaining balance, due dates), installment repayment forms selecting unpaid installments, and loan obligation creation.
+  3. **Historical Weighted-Average Cost Basis & Valuation Disclaimer**: Build `src/frontend/views/investments.py` presenting portfolio positions with 4-decimal quantity precision and weighted-average acquisition cost basis per unit. Display a prominent architectural disclaimer confirming that live market feeds and automated brokerage sync are outside active scope boundaries. Liquidations display realized capital gain/loss breakdowns.
+  4. **Recurring Transactions & Manual Ledger Execution**: Build `src/frontend/views/recurring.py` presenting a proactive due executions alert banner. In compliance with architectural rules, recurring transactions are not automated via background cron daemons; operators explicitly trigger due executions to create verified double-entry ledger transactions. Rules can be paused and resumed.
+  5. **Navigation Integration**: Update `src/frontend/app.py` and `src/frontend/views/__init__.py` to provide seamless navigation across all 9 core views.
+  6. **Windows Loopback Test Protocol**:
+     - *Root Cause*: FastAPI's `TestClient` uses AnyIO's blocking portal with Python 3.12 `asyncio.ProactorEventLoop` on Windows, which utilizes local loopback socket pairs (`127.0.0.1`) for cross-thread synchronization. Under the Windows restricted terminal sandbox (`BypassSandbox: false`), local loopback socket traffic is dropped or blocked, causing AnyIO to hang indefinitely on socket handshakes.
+     - *Protocol*: Execute pure unit tests (`pytest tests/unit`) within the standard sandbox (passing in 2.85s). Execute full test suites requiring ASGI loopback sockets (`pytest --cov=src`) with `BypassSandbox: true` (passing in 14.0s).
+- **Rationale**:
+  - Delivers all required advanced personal finance capabilities while preserving strict accounting invariants.
+  - Transparently explains valuation mechanics to prevent user misunderstanding.
+  - Establishes a verified, reproducible testing workflow on Windows platforms without modifying application security boundaries.
+- **Consequences**:
+  - Frontend users have complete visual control over goals, debts, investments, and recurring rules.
+  - Continuous integration and local testing on Windows must account for loopback socket requirements in sandboxed environments.
+
+
 
 
 

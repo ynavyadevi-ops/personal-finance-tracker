@@ -347,3 +347,309 @@ def test_ui_render_badge_and_palette() -> None:
     assert PALETTE["bg"] == "#0B1120"
     assert PALETTE["surface"] == "#151E30"
     assert PALETTE["accent"] == "#38BDF8"
+
+
+def test_api_client_goal_operations() -> None:
+    """Verify savings goals listing, creation, progress tracking, contributions, and withdrawals."""
+    client = ApiClient(base_url="http://testserver/api/v1", token="test-token")
+
+    # 1. List goals
+    mock_list = MagicMock(spec=httpx.Response)
+    mock_list.status_code = 200
+    mock_list.json.return_value = {
+        "success": True,
+        "data": [
+            {
+                "id": "goal-1",
+                "name": "Emergency Fund",
+                "target_amount": "100000.00",
+                "current_amount": "25000.00",
+                "currency": "INR",
+                "is_achieved": False,
+            }
+        ],
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_list):
+        ok, goals = client.list_goals()
+        assert ok is True
+        assert len(goals) == 1
+        assert goals[0]["name"] == "Emergency Fund"
+
+    # 2. Create goal
+    mock_create = MagicMock(spec=httpx.Response)
+    mock_create.status_code = 201
+    mock_create.json.return_value = {
+        "success": True,
+        "data": {"id": "goal-2", "name": "Vacation Fund", "target_amount": "50000.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_create):
+        ok, created = client.create_goal({"name": "Vacation Fund", "target_amount": "50000.00"})
+        assert ok is True
+        assert created["id"] == "goal-2"
+
+    # 3. Get progress
+    mock_prog = MagicMock(spec=httpx.Response)
+    mock_prog.status_code = 200
+    mock_prog.json.return_value = {
+        "success": True,
+        "data": {
+            "goal_id": "goal-1",
+            "progress_percentage": "25.0",
+            "remaining_amount": "75000.00",
+        },
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_prog):
+        ok, prog = client.get_goal_progress("goal-1")
+        assert ok is True
+        assert prog["progress_percentage"] == "25.0"
+
+    # 4. Contribute
+    mock_contrib = MagicMock(spec=httpx.Response)
+    mock_contrib.status_code = 200
+    mock_contrib.json.return_value = {
+        "success": True,
+        "data": {"goal_id": "goal-1", "current_amount": "30000.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_contrib):
+        ok, contrib_res = client.contribute_to_goal("goal-1", "5000.00")
+        assert ok is True
+        assert contrib_res["current_amount"] == "30000.00"
+
+    # 5. Withdraw
+    mock_with = MagicMock(spec=httpx.Response)
+    mock_with.status_code = 200
+    mock_with.json.return_value = {
+        "success": True,
+        "data": {"goal_id": "goal-1", "current_amount": "20000.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_with):
+        ok, with_res = client.withdraw_from_goal("goal-1", "10000.00")
+        assert ok is True
+        assert with_res["current_amount"] == "20000.00"
+
+
+def test_api_client_loan_operations() -> None:
+    """Verify loan liabilities listing, details retrieval, creation, and payment recording."""
+    client = ApiClient(base_url="http://testserver/api/v1", token="test-token")
+
+    # 1. List loans
+    mock_list = MagicMock(spec=httpx.Response)
+    mock_list.status_code = 200
+    mock_list.json.return_value = {
+        "success": True,
+        "data": [
+            {
+                "id": "loan-1",
+                "lender_name": "HDFC Bank",
+                "principal_amount": "500000.00",
+                "remaining_balance": "480000.00",
+                "is_settled": False,
+            }
+        ],
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_list):
+        ok, loans = client.list_loans()
+        assert ok is True
+        assert len(loans) == 1
+        assert loans[0]["lender_name"] == "HDFC Bank"
+
+    # 2. Get loan details with schedules
+    mock_get = MagicMock(spec=httpx.Response)
+    mock_get.status_code = 200
+    mock_get.json.return_value = {
+        "success": True,
+        "data": {
+            "id": "loan-1",
+            "lender_name": "HDFC Bank",
+            "payment_schedules": [{"payment_number": 1, "is_paid": False}],
+        },
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_get):
+        ok, loan = client.get_loan("loan-1")
+        assert ok is True
+        assert len(loan["payment_schedules"]) == 1
+
+    # 3. Create loan
+    mock_create = MagicMock(spec=httpx.Response)
+    mock_create.status_code = 201
+    mock_create.json.return_value = {
+        "success": True,
+        "data": {"id": "loan-new", "principal_amount": "300000.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_create):
+        ok, created = client.create_loan(
+            {"account_id": "acc-1", "lender_name": "SBI", "principal_amount": "300000.00"}
+        )
+        assert ok is True
+        assert created["id"] == "loan-new"
+
+    # 4. Record loan payment
+    mock_pay = MagicMock(spec=httpx.Response)
+    mock_pay.status_code = 200
+    mock_pay.json.return_value = {
+        "success": True,
+        "data": {"loan_id": "loan-1", "remaining_balance": "470000.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_pay):
+        ok, pay_res = client.record_loan_payment("loan-1", payment_number=1)
+        assert ok is True
+        assert pay_res["remaining_balance"] == "470000.00"
+
+
+def test_api_client_investment_operations() -> None:
+    """Verify portfolio holdings, buy, sell, and dividend API interactions."""
+    client = ApiClient(base_url="http://testserver/api/v1", token="test-token")
+
+    # 1. List holdings
+    mock_list = MagicMock(spec=httpx.Response)
+    mock_list.status_code = 200
+    mock_list.json.return_value = {
+        "success": True,
+        "data": [
+            {
+                "id": "h-1",
+                "asset_id": "asset-1",
+                "quantity": "10.0000",
+                "cost_basis_per_unit": "2500.00",
+                "total_cost": "25000.00",
+                "currency": "INR",
+            }
+        ],
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_list):
+        ok, holdings = client.list_holdings()
+        assert ok is True
+        assert len(holdings) == 1
+        assert holdings[0]["quantity"] == "10.0000"
+
+    # 2. Buy security
+    mock_buy = MagicMock(spec=httpx.Response)
+    mock_buy.status_code = 201
+    mock_buy.json.return_value = {
+        "success": True,
+        "data": {"id": "h-1", "quantity": "15.0000", "total_cost": "37500.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_buy):
+        ok, buy_res = client.buy_security(
+            {
+                "account_id": "acc-1",
+                "asset_id": "asset-1",
+                "quantity": "5.0000",
+                "price_per_unit": "2500.00",
+            }
+        )
+        assert ok is True
+        assert buy_res["quantity"] == "15.0000"
+
+    # 3. Sell security
+    mock_sell = MagicMock(spec=httpx.Response)
+    mock_sell.status_code = 200
+    mock_sell.json.return_value = {
+        "success": True,
+        "data": {
+            "asset_symbol": "RELIANCE",
+            "quantity_sold": "5.0000",
+            "realized_gain_loss": "1250.00",
+            "is_gain": True,
+        },
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_sell):
+        ok, sell_res = client.sell_security(
+            {
+                "account_id": "acc-1",
+                "asset_id": "asset-1",
+                "quantity": "5.0000",
+                "price_per_unit": "2750.00",
+            }
+        )
+        assert ok is True
+        assert sell_res["realized_gain_loss"] == "1250.00"
+        assert sell_res["is_gain"] is True
+
+    # 4. Record dividend
+    mock_div = MagicMock(spec=httpx.Response)
+    mock_div.status_code = 201
+    mock_div.json.return_value = {
+        "success": True,
+        "data": {"id": "tx-div", "total_amount": "500.00", "transaction_type": "DIVIDEND"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_div):
+        ok, div_res = client.record_dividend(
+            {"account_id": "acc-1", "asset_id": "asset-1", "amount": "500.00"}
+        )
+        assert ok is True
+        assert div_res["total_amount"] == "500.00"
+
+
+def test_api_client_recurring_operations() -> None:
+    """Verify recurring rules listing, due rule checks, creation, pause, resume, and execution."""
+    client = ApiClient(base_url="http://testserver/api/v1", token="test-token")
+
+    # 1. List recurring rules
+    mock_list = MagicMock(spec=httpx.Response)
+    mock_list.status_code = 200
+    mock_list.json.return_value = {
+        "success": True,
+        "data": [{"id": "rule-1", "name": "Netflix", "amount": "649.00", "is_active": True}],
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_list):
+        ok, rules = client.list_recurring_rules()
+        assert ok is True
+        assert len(rules) == 1
+        assert rules[0]["name"] == "Netflix"
+
+    # 2. List due rules
+    mock_due = MagicMock(spec=httpx.Response)
+    mock_due.status_code = 200
+    mock_due.json.return_value = {
+        "success": True,
+        "data": [{"id": "rule-1", "name": "Netflix", "next_occurrence": "2026-11-15"}],
+    }
+    with patch.object(httpx.Client, "get", return_value=mock_due):
+        ok, due_rules = client.list_due_recurring_rules()
+        assert ok is True
+        assert len(due_rules) == 1
+
+    # 3. Create recurring rule
+    mock_create = MagicMock(spec=httpx.Response)
+    mock_create.status_code = 201
+    mock_create.json.return_value = {
+        "success": True,
+        "data": {"id": "rule-new", "name": "Broadband", "amount": "999.00"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_create):
+        ok, created = client.create_recurring_rule(
+            {"account_id": "acc-1", "name": "Broadband", "amount": "999.00", "currency": "INR"}
+        )
+        assert ok is True
+        assert created["id"] == "rule-new"
+
+    # 4. Execute due rule
+    mock_exec = MagicMock(spec=httpx.Response)
+    mock_exec.status_code = 201
+    mock_exec.json.return_value = {
+        "success": True,
+        "data": {"transaction_id": "tx-rec-1", "description": "Recurring: Netflix"},
+    }
+    with patch.object(httpx.Client, "post", return_value=mock_exec):
+        ok, ex_res = client.execute_due_rule("rule-1")
+        assert ok is True
+        assert ex_res["transaction_id"] == "tx-rec-1"
+
+    # 5. Pause rule
+    mock_pause = MagicMock(spec=httpx.Response)
+    mock_pause.status_code = 200
+    mock_pause.json.return_value = {"success": True, "data": {"id": "rule-1", "is_active": False}}
+    with patch.object(httpx.Client, "post", return_value=mock_pause):
+        ok, p_res = client.pause_recurring_rule("rule-1")
+        assert ok is True
+        assert p_res["is_active"] is False
+
+    # 6. Resume rule
+    mock_resume = MagicMock(spec=httpx.Response)
+    mock_resume.status_code = 200
+    mock_resume.json.return_value = {"success": True, "data": {"id": "rule-1", "is_active": True}}
+    with patch.object(httpx.Client, "post", return_value=mock_resume):
+        ok, r_res = client.resume_recurring_rule("rule-1")
+        assert ok is True
+        assert r_res["is_active"] is True

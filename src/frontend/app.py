@@ -10,7 +10,11 @@ from src.frontend.views import (
     render_accounts_view,
     render_budgets_view,
     render_dashboard_view,
+    render_goals_view,
+    render_investments_view,
+    render_loans_view,
     render_login_view,
+    render_recurring_view,
     render_settings_view,
     render_transactions_view,
 )
@@ -47,7 +51,7 @@ st.sidebar.markdown(
         <span style="font-size: 1.75rem;">💸</span>
         <div>
             <span style="font-size: 1.15rem; font-weight: 700; color: {PALETTE["text"]};">FinanceTracker</span>
-            <div style="font-size: 0.75rem; color: {PALETTE["accent"]}; font-weight: 600;">Phase 5 Core UI</div>
+            <div style="font-size: 0.75rem; color: {PALETTE["accent"]}; font-weight: 600;">Phase 6 Advanced Views</div>
         </div>
     </div>
     """,
@@ -72,6 +76,10 @@ NAV_OPTIONS = [
     "🏦 Accounts",
     "💳 Transactions",
     "🎯 Budgets",
+    "🏆 Savings Goals",
+    "📉 Loans & Debts",
+    "📈 Investments",
+    "🔄 Recurring Rules",
     "⚙️ Settings",
 ]
 
@@ -117,7 +125,7 @@ if st.sidebar.button("Log Out", key="sidebar_logout_btn", use_container_width=Tr
     api_client.token = None
     st.rerun()
 
-st.sidebar.caption("Personal Finance Tracker • Phase 5")
+st.sidebar.caption("Personal Finance Tracker • Phase 6")
 
 # ==============================================================================
 # ROUTING CONTROLLER
@@ -130,5 +138,13 @@ elif selected_nav == "💳 Transactions":
     render_transactions_view()
 elif selected_nav == "🎯 Budgets":
     render_budgets_view()
+elif selected_nav == "🏆 Savings Goals":
+    render_goals_view()
+elif selected_nav == "📉 Loans & Debts":
+    render_loans_view()
+elif selected_nav == "📈 Investments":
+    render_investments_view()
+elif selected_nav == "🔄 Recurring Rules":
+    render_recurring_view()
 elif selected_nav == "⚙️ Settings":
     render_settings_view()

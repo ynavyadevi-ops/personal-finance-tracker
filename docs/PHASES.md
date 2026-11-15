@@ -236,11 +236,26 @@ Development is partitioned into nine strictly-bounded sequential phases (**Phase
 
 ---
 
-## Phase 6: Streamlit Advanced Feature Pages
+## Phase 6: Streamlit Advanced Feature Pages (COMPLETED & VERIFIED)
 
 - **Objective**: Build dedicated Streamlit user interfaces for advanced financial management.
 - **Dependencies**: Phase 5 explicit approval.
-- **Status**: **PENDING AUTHORIZATION**.
+- **Status**: **COMPLETED & VERIFIED** (Phase gate active; awaiting explicit approval to begin Phase 7).
+- **Delivered Scope**:
+  - **Savings Goals (`src/frontend/views/goals.py`)**: Target milestone progress, funded progress bars, contribution and withdrawal forms, and goal creation.
+  - **Loans & Debt Liabilities (`src/frontend/views/loans.py`)**: Loan liability summaries, amortization schedule viewer, installment repayment logging, and loan obligation creation.
+  - **Investment Portfolio (`src/frontend/views/investments.py`)**: Historical weighted-average cost basis positions, prominent market valuation disclaimer, security purchase, security liquidation with realized capital gains/losses, and dividend income logging.
+  - **Recurring Transactions (`src/frontend/views/recurring.py`)**: Due executions alert banner with manual double-entry ledger execution triggers, rules directory, pause/resume schedule toggles, and schedule template creation.
+  - **Navigation Shell (`src/frontend/app.py`, `src/frontend/views/__init__.py`)**: Sidebar navigation updated to expose all 9 core views.
+  - **ApiClient Extensions (`src/frontend/api_client.py`)**: Added 17 authenticated endpoints covering goals, loans, investments, and recurring rules.
+- **Verification Evidence**:
+  - 159 tests passing, 0 failures, 80% coverage.
+  - Ruff: 0 lint errors, 109 files formatted.
+  - Mypy: strict type-check passed in 67 files.
+  - Bandit: 0 security issues in 9,429 lines.
+  - pip-audit: 0 known vulnerabilities.
+  - Preserved existing database records `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` intact in `data/finance.db`.
+- **Approval Gate**: Stopped at Phase 6 completion gate. Explicit user approval required to proceed to Phase 7.
 
 ---
 

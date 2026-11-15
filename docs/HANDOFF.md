@@ -3,7 +3,7 @@
 > **DOCUMENT**: `docs/HANDOFF.md`  
 > **STATUS**: ACTIVE & ENFORCED  
 > **STACK**: Python 3.12 (FastAPI, Streamlit, SQLAlchemy 2.0, Alembic, Pydantic v2, Pandas, Plotly)  
-> **CURRENT PHASE**: Phase 5 — Streamlit Frontend Core UI & Core Pages (COMPLETED & VERIFIED)
+> **CURRENT PHASE**: Phase 6 — Streamlit Frontend Advanced Views (COMPLETED & VERIFIED)
 
 ---
 
@@ -17,20 +17,19 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 2 (Database Modeling, SQLAlchemy ORM & Alembic Migrations)**: **COMPLETE & VERIFIED**.
 - **Phase 3 (Core Accounting Engine, Financial Services & Domain Logic)**: **COMPLETE & VERIFIED**.
 - **Phase 4 (FastAPI REST API & Data Portability Services)**: **COMPLETE & VERIFIED**.
-- **Phase 5 (Streamlit Frontend Core UI & Core Pages)**: **COMPLETED & VERIFIED**.
-  - Built dark fintech UI shell (`#0B1120`, `#151E30`, `#1D2940`, `#38BDF8`, `#22C55E`, `#F87171`) consuming FastAPI backend REST endpoints.
-  - Implemented decoupled `ApiClient` (`src/frontend/api_client.py`) with Bearer token injection, structured error tuples, 401 session expiration handling, and prohibition of automated retries on state-mutating POST requests.
-  - In-memory session state management in `st.session_state` with authentication barrier routing unauthenticated visitors to a dedicated login portal.
-  - Implemented 5 modular core pages:
-    1. **Dashboard** (`src/frontend/views/dashboard.py`): Financial account overview, isolated currency totals (INR assets, USD assets without cross-currency mixing), monthly cash flow (strictly excluding transfers), recent transactions, and budget utilization progress.
-    2. **Accounts** (`src/frontend/views/accounts.py`): Live directory with reconciled balances, create account form, metadata editing, and account archiving with confirmation.
-    3. **Transactions** (`src/frontend/views/transactions.py`): Queryable ledger with pagination and filters, income and expense recording, balanced inter-account transfers with currency mismatch warnings, and transaction reversals with confirmation.
-    4. **Budgets** (`src/frontend/views/budgets.py`): Monthly category spending caps, utilization progress bars, remaining amounts, and overspending indicators.
-    5. **Settings** (`src/frontend/views/settings.py`): User profile presentation, INR core currency preference, runtime specifications, and session logout.
-  - Added 19 unit tests across `tests/unit/test_frontend.py` and `tests/unit/test_frontend_views.py`. Total automated test suite stands at **151 passed tests** (100% pass rate in ~9.1s, 83% overall test coverage).
-  - Ruff (0 errors, 105 files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 8,077 lines), pip-audit (0 CVE vulnerabilities).
+- **Phase 5 (Streamlit Frontend Core UI & Core Pages)**: **COMPLETE & VERIFIED**.
+- **Phase 6 (Streamlit Frontend Advanced Views)**: **COMPLETED & VERIFIED**.
+  - Implemented 4 modular advanced frontend views:
+    1. **Savings Goals** (`src/frontend/views/goals.py`): Target milestone tracking, funded progress bars, goal contributions and withdrawals, and milestone creation.
+    2. **Loans & Debts** (`src/frontend/views/loans.py`): Loan liability summaries, amortization schedule breakdown (principal, interest, remaining balance), installment repayment recording, and loan obligation creation.
+    3. **Investments** (`src/frontend/views/investments.py`): Prominent valuation disclaimer (historical weighted-average cost basis, zero mock live quotes), portfolio holdings, security buy, security sell with realized capital gains/losses calculation, and dividend receipts.
+    4. **Recurring Rules** (`src/frontend/views/recurring.py`): Due recurring execution alerts with manual ledger posting triggers, rules directory, pause/resume schedule toggles, and schedule creation.
+  - Updated navigation in `src/frontend/app.py` to support all 9 views: Dashboard, Accounts, Transactions, Budgets, Savings Goals, Loans & Debts, Investments, Recurring Rules, and Settings.
+  - Extended `ApiClient` (`src/frontend/api_client.py`) with 17 authenticated endpoints covering advanced feature modules.
+  - Added 8 unit tests across `tests/unit/test_frontend.py` and `tests/unit/test_frontend_views.py`. Total automated test suite stands at **159 passed tests** (100% pass rate in 14.0s, 80% overall test coverage).
+  - Ruff (0 errors, 109 files formatted), Mypy strict (0 errors in 67 files), Bandit SAST (0 issues in 9,429 lines), pip-audit (0 CVE vulnerabilities).
   - Existing database records preserved intact: `Primary User ('user@local.dev', None)` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 5 Approval Gate. Phase 6 is NOT started.**
+- **Execution is halted at the Phase 6 Approval Gate. Phase 7 is NOT started.**
 
 ---
 
