@@ -63,8 +63,28 @@ class ApiClient:
             if isinstance(body, dict):
                 error_info = body.get("error")
                 if isinstance(error_info, dict):
+                    message = error_info.get("message", response.text)
+                    details = error_info.get("details")
+                    if isinstance(details, dict):
+                        # Extract granular validation error messages if present
+                        val_errors = details.get("validation_errors") or details.get("errors")
+                        if isinstance(val_errors, list) and val_errors:
+                            clean_msgs: list[str] = []
+                            for ve in val_errors:
+                                if isinstance(ve, dict):
+                                    msg = ve.get("message", "")
+                                    # Strip Pydantic prefixes
+                                    if msg.startswith("Value error, "):
+                                        msg = msg[len("Value error, "):]
+                                    elif msg.startswith("Assertion failed, "):
+                                        msg = msg[len("Assertion failed, "):]
+                                    if msg:
+                                        clean_msgs.append(msg)
+                            if clean_msgs:
+                                message = "; ".join(clean_msgs)
+
                     return {
-                        "message": error_info.get("message", response.text),
+                        "message": message,
                         "code": error_info.get("code", f"HTTP_{response.status_code}"),
                         "status_code": response.status_code,
                     }
@@ -141,6 +161,56 @@ class ApiClient:
         except Exception as e:
             logger.error(f"Error fetching user profile: {e}")
             return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
+    def register(
+        self,
+        name: str,
+        email: str,
+        password: str,
+        confirm_password: str,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Register a new user account."""
+        url = f"{self.base_url}/auth/register"
+        payload = {
+            "name": name.strip(),
+            "email": email.strip().lower(),
+            "password": password,
+            "confirm_password": confirm_password,
+        }
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 201 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Registration request failed: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def change_password(
+        self,
+        current_password: str,
+        new_password: str,
+        confirm_password: str,
+    ) -> tuple[bool, dict[str, Any]]:
+        """Change password for currently authenticated user."""
+        url = f"{self.base_url}/auth/change-password"
+        payload = {
+            "current_password": current_password,
+            "new_password": new_password,
+            "confirm_password": confirm_password,
+        }
+        try:
+            with self._get_client() as client:
+                response = client.post(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Password change failed: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
 
     # =========================================================================
     # FINANCIAL ACCOUNT ENDPOINTS
@@ -703,6 +773,126 @@ class ApiClient:
         except Exception as e:
             logger.error(f"Error resuming recurring rule {rule_id}: {e}")
             return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
+    # =========================================================================
+    # ADMINISTRATIVE PORTAL ENDPOINTS
+    # =========================================================================
+
+    def get_admin_overview(self) -> tuple[bool, dict[str, Any]]:
+        """Fetch platform overview metrics for admin dashboard."""
+        url = f"{self.base_url}/admin/overview"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error fetching admin overview: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def list_admin_users(
+        self,
+        search: str | None = None,
+        role: str | None = None,
+        active_only: bool | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch user accounts list with administrative metadata."""
+        url = f"{self.base_url}/admin/users"
+        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        if search:
+            params["search"] = search
+        if role:
+            params["role"] = role
+        if active_only is not None:
+            params["active_only"] = str(active_only).lower()
+
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", [])
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing admin users: {e}")
+            return False, []
+
+    def update_user_status(self, user_id: str, is_active: bool) -> tuple[bool, dict[str, Any]]:
+        """Enable or disable access for a target user account."""
+        url = f"{self.base_url}/admin/users/{user_id}/status"
+        payload = {"is_active": is_active}
+        try:
+            with self._get_client() as client:
+                response = client.patch(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error updating user status for {user_id}: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def admin_reset_user_password(self, user_id: str) -> tuple[bool, dict[str, Any]]:
+        """Generate temporary password and force password change for user."""
+        url = f"{self.base_url}/admin/users/{user_id}/reset-password"
+        try:
+            with self._get_client() as client:
+                response = client.post(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error resetting password for user {user_id}: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def get_admin_audit_logs(self, limit: int = 50) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch administrative and security audit trail logs."""
+        url = f"{self.base_url}/admin/audit-logs"
+        params = {"limit": limit}
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", [])
+                return False, []
+        except Exception as e:
+            logger.error(f"Error fetching admin audit logs: {e}")
+            return False, []
+
+    def get_admin_settings(self) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch platform settings."""
+        url = f"{self.base_url}/admin/settings"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", [])
+                return False, []
+        except Exception as e:
+            logger.error(f"Error fetching platform settings: {e}")
+            return False, []
+
+    def update_admin_settings(self, registration_enabled: bool) -> tuple[bool, dict[str, Any]]:
+        """Update platform settings (e.g. registration kill-switch)."""
+        url = f"{self.base_url}/admin/settings"
+        payload = {"registration_enabled": registration_enabled}
+        try:
+            with self._get_client() as client:
+                response = client.patch(url, json=payload, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error updating platform settings: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
 
 
 api_client = ApiClient()

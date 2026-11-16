@@ -137,6 +137,23 @@ This document provides a comprehensive, step-by-step browser testing procedure f
 
 ---
 
+### 2.12 User Registration & Administrative Portal View
+| ID | Test Scenario | Steps | Expected Result | Pass/Fail |
+| :--- | :--- | :--- | :--- | :--- |
+| **REG-01** | Public User Sign-Up | On login page, switch to "Create Account" tab. Enter Name, Email, Password (meeting complexity rules: `UserPass123!@#`), Confirm Password. Submit. | Account created successfully. Green notification displayed prompting user to sign in. | [ ] |
+| **REG-02** | Registration Password Complexity Rejection | Enter weak password `password` without numbers or special chars. Submit. | Registration rejected with descriptive error requiring min 8 chars, uppercase, lowercase, digit, and symbol. | [ ] |
+| **REG-03** | Anti-Enumeration Duplicate Email Rejection | Attempt to register with an email that is already registered. Submit. | Generic safe error returned: "Unable to complete registration with the provided details." Account existence not revealed. | [ ] |
+| **ADM-01** | Admin Bootstrap CLI | Run `scripts\bootstrap_admin.bat --email admin@local.dev --generate`. | Generates secure 32-char password, displays security warning, assigns ADMIN role with `must_change_password=True`. | [ ] |
+| **ADM-02** | Mandatory First-Login Password Change | Sign in with bootstrapped admin credentials. | Mandatory Password Change screen displayed. Navigation blocked until new password is set and confirmed. | [ ] |
+| **ADM-03** | Admin Portal Access Restriction | Sign in as standard USER (`user@local.dev`). | "🛡️ Admin Portal" is NOT present in sidebar navigation. Direct access is denied. | [ ] |
+| **ADM-04** | Admin Portal Overview & Governance | Sign in as ADMIN (`admin@local.dev`). Navigate to "🛡️ Admin Portal". | Overview KPI cards render (Total Users, Active/Disabled ratio, 30d Registrations, Registration status). Zero financial data shown. | [ ] |
+| **ADM-05** | Admin User Deactivation | In "User Management" tab, select target user and click "Deactivate Account". | User status toggles to Disabled. Subsequent login attempts by that user are rejected with HTTP 401. | [ ] |
+| **ADM-06** | Admin Temporary Password Reset | Select user, click "Generate Temporary Password". | Displays one-time temporary password in an alert box. Target user account flagged for mandatory password change on login. | [ ] |
+| **ADM-07** | Registration Kill-Switch | In "System Settings" tab, turn off "Allow Public User Registration" toggle and save. | Public registration endpoint immediately rejects all new registrations with HTTP 403 Forbidden. | [ ] |
+| **ADM-08** | Financial Privacy Boundary Verification | Inspect all tabs and tables of the Admin Portal. | Confirms ZERO user accounts, transactions, balances, budgets, loans, or investments are queryable or visible. Strict privacy boundary preserved. | [ ] |
+
+---
+
 ## 3. Failure Indicators & Troubleshooting Guide
 
 | Symptom | Probable Cause | Corrective Action |

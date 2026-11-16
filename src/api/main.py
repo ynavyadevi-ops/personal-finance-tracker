@@ -10,6 +10,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from src.api.routers import (
     accounts_router,
+    admin_router,
     auth_router,
     budgets_router,
     data_portability_router,
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(investments_router, prefix=settings.API_V1_PREFIX)
     app.include_router(recurring_router, prefix=settings.API_V1_PREFIX)
     app.include_router(data_portability_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(admin_router, prefix=settings.API_V1_PREFIX)
 
     return app
 

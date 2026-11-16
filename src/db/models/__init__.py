@@ -15,12 +15,14 @@ from src.db.models.investment import (
 )
 from src.db.models.loan import InterestType, LoanDebt, LoanPaymentSchedule
 from src.db.models.recurring import Frequency, RecurringRule
+from src.db.models.settings import SystemSettings
 from src.db.models.transaction import EntryType, Transaction, TransactionEntry, TransactionType
-from src.db.models.user import User
+from src.db.models.user import User, UserRole
 
 __all__ = [
     "Base",
     "User",
+    "UserRole",
     "FinancialAccount",
     "AccountType",
     "Category",
@@ -42,4 +44,5 @@ __all__ = [
     "AssetType",
     "InvestmentTxType",
     "AuditLog",
+    "SystemSettings",
 ]

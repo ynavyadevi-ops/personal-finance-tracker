@@ -1,8 +1,10 @@
 """SQLAlchemy model for Users."""
 
+import enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Index, String
+from sqlalchemy import Boolean, Index, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base, TimestampMixin, generate_uuid
@@ -17,6 +19,13 @@ if TYPE_CHECKING:
     from src.db.models.loan import LoanDebt
     from src.db.models.recurring import RecurringRule
     from src.db.models.transaction import Transaction
+
+
+class UserRole(str, enum.Enum):
+    """User authorization roles."""
+
+    USER = "USER"
+    ADMIN = "ADMIN"
 
 
 class User(Base, TimestampMixin):
@@ -42,6 +51,24 @@ class User(Base, TimestampMixin):
     hashed_password: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
+    )
+    role: Mapped[UserRole] = mapped_column(
+        SQLEnum(UserRole, native_enum=False, length=20),
+        nullable=False,
+        default=UserRole.USER,
+        server_default="USER",
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="1",
+    )
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
     )
 
     # Relationships
@@ -87,7 +114,11 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
 
-    __table_args__ = (Index("ix_users_name", "name"),)
+    __table_args__ = (
+        Index("ix_users_name", "name"),
+        Index("ix_users_role", "role"),
+        Index("ix_users_is_active", "is_active"),
+    )
 
     def __repr__(self) -> str:
-        return f"<User(id={self.id}, name={self.name})>"
+        return f"<User(id={self.id}, name={self.name}, role={self.role})>"

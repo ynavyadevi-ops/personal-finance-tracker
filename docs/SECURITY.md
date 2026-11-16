@@ -334,6 +334,53 @@ The Phase 5 Streamlit frontend architecture enforces multi-layered UI security d
 - **Automated Regression Suite**: 192 passed automated tests (100% pass rate in 15.2s), **81% overall code coverage**.
 - **Release Security Status**: **APPROVED FOR LOCAL MVP TESTING**. Public deployment is strictly non-authorized.
 
+---
+
+## 16. User Registration & Administrative Portal Security Architecture
+
+### 16.1 Anti-Enumeration & Registration Protection
+1. **Generic Duplicate Error**:
+   - `POST /api/v1/auth/register` returns generic message `ValidationError("Unable to complete registration with the provided details.")` when a duplicate email is provided.
+   - Attackers cannot enumerate registered email addresses by probing registration responses.
+2. **Password Complexity Invariant**:
+   - Minimum 8 characters, maximum 128 characters.
+   - At least 1 uppercase letter, 1 lowercase letter, 1 digit, and 1 special symbol.
+3. **Argon2id Key Derivation**:
+   - Passwords hashed using Argon2id with memory cost parameters matching existing security baselines.
+   - Plaintext passwords never stored, cached, logged, or reflected in API responses.
+4. **Sliding-Window Rate Limiting**:
+   - Registration and authentication attempts are throttled by client IP (5 attempts per 15-minute window).
+5. **Platform Kill-Switch**:
+   - `registration_enabled` setting in `system_settings` table allows administrators to immediately freeze public registrations (returning HTTP 403 Forbidden).
+
+### 16.2 Administrator Bootstrap & Governance Controls
+1. **Local CLI Only**:
+   - Initial administrative bootstrap requires physical/shell access via `python -m src.cli.bootstrap_admin`.
+   - Public API cannot bootstrap administrators.
+2. **Idempotency & Anti-Elevation Guard**:
+   - CLI checks if an active admin already exists; aborts cleanly if so.
+   - Standard `USER` accounts cannot be elevated to `ADMIN` without explicit, interactive operator confirmation.
+3. **Mandatory First-Login Password Change**:
+   - Bootstrapped or reset admin and user accounts receive `must_change_password=True`.
+   - The user is gated by a blocking password change UI before any application features become accessible.
+4. **Self-Disable Prevention**:
+   - An administrator cannot deactivate their own active account (`ValidationError` -> HTTP 422).
+
+### 16.3 Strict Financial Privacy Boundary
+1. **Architectural Segregation of Admin & Financial Data**:
+   - Administrative endpoints (`src/api/routers/admin.py`) and UI views (`src/frontend/views/admin.py`) interact exclusively with `User`, `AuditLog`, and `SystemSettings`.
+   - Queries and joins against financial tables (`FinancialAccount`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebt`, `InvestmentHolding`) are strictly forbidden in administrative code paths.
+   - Platform administrators cannot query, view, or deduce any customer balances, accounts, transactions, or financial holdings.
+2. **Immutable Audit Trail**:
+   - All administrative actions (`USER_STATUS_CHANGE`, `ADMIN_PASSWORD_RESET`, `SYSTEM_SETTINGS_UPDATE`, `ADMIN_BOOTSTRAP`) are immutably logged with actor admin ID, target entity ID, IP address, user-agent, and timestamp.
+
+### 16.4 Security Audit Results
+- **Bandit SAST**: Scanned 11,923 lines of code; **0 security issues found**.
+- **pip-audit**: Scanned 100 installed dependencies; **0 known CVEs**.
+- **Ruff & Mypy**: 100% clean formatting, linting, and strict type checking.
+- **Automated Tests**: 214/214 passed (100% pass rate).
+
+
 
 
 

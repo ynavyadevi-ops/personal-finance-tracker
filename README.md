@@ -110,6 +110,13 @@ uvicorn src.api.main:app --reload --port 8000
 # Health Check: http://127.0.0.1:8000/health
 
 # 5. Launch the Streamlit web dashboard (Terminal 2)
+# Windows PowerShell (Recommended):
+powershell -ExecutionPolicy Bypass -File scripts\run_frontend.ps1
+
+# Or Windows Command Prompt / Batch:
+scripts\run_frontend.bat
+
+# Or direct CLI invocation:
 streamlit run src/frontend/app.py --server.port 8501
 # Web Dashboard: http://127.0.0.1:8501
 ```

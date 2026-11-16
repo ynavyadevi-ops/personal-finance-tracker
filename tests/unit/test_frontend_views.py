@@ -25,7 +25,17 @@ def test_render_login_view_structure() -> None:
         patch("streamlit.session_state", mock_session_state),
         patch("streamlit.columns", return_value=[MagicMock(), MagicMock(), MagicMock()]),
         patch("streamlit.form", return_value=MagicMock()),
-        patch("streamlit.text_input", side_effect=["user@local.dev", "secret"]),
+        patch(
+            "streamlit.text_input",
+            side_effect=[
+                "user@local.dev",
+                "secret",
+                "Jane Doe",
+                "jane@example.dev",
+                "secret",
+                "secret",
+            ],
+        ),
         patch("streamlit.form_submit_button", return_value=False),
         patch("streamlit.warning") as mock_warn,
         patch("streamlit.error") as mock_err,
@@ -435,3 +445,54 @@ def test_render_analytics_view() -> None:
         assert mock_metric.call_count >= 4
         # Plotly charts rendered
         assert mock_plot.call_count >= 1
+
+
+def test_render_admin_view_access_denied_for_regular_user() -> None:
+    """Verify regular users cannot render admin view and are blocked with error."""
+    from src.frontend.views.admin import render_admin_view
+
+    mock_session_state = {"user_profile": {"role": "USER", "email": "user@local.dev"}}
+    with (
+        patch("streamlit.session_state", mock_session_state),
+        patch("streamlit.error") as mock_err,
+        patch("streamlit.stop", side_effect=Exception("st.stop")),
+    ):
+        try:
+            render_admin_view()
+        except Exception as exc:
+            assert str(exc) == "st.stop"
+        mock_err.assert_called_once()
+        assert "Access Denied" in mock_err.call_args[0][0]
+
+
+def test_render_admin_view_renders_tabs_for_admin() -> None:
+    """Verify admin portal view renders dashboard tabs and overview metrics for ADMIN role."""
+    from src.frontend.views.admin import render_admin_view
+
+    mock_session_state = {
+        "user_profile": {"id": "admin-1", "role": "ADMIN", "email": "admin@local.dev"}
+    }
+    mock_overview = {
+        "total_users": 5,
+        "active_users": 5,
+        "disabled_users": 0,
+        "recent_registrations_30d": 2,
+        "registration_enabled": True,
+    }
+    with (
+        patch("streamlit.session_state", mock_session_state),
+        patch(
+            "src.frontend.api_client.api_client.get_admin_overview",
+            return_value=(True, mock_overview),
+        ),
+        patch("src.frontend.api_client.api_client.list_admin_users", return_value=(True, [])),
+        patch("src.frontend.api_client.api_client.get_admin_audit_logs", return_value=(True, [])),
+        patch("src.frontend.api_client.api_client.get_admin_settings", return_value=(True, [])),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock(), MagicMock()]),
+        patch("streamlit.columns", side_effect=_mock_columns),
+        patch("streamlit.metric") as mock_metric,
+        patch("streamlit.selectbox", return_value="All"),
+        patch("streamlit.text_input", return_value=""),
+    ):
+        render_admin_view()
+        assert mock_metric.call_count >= 4

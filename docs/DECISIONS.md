@@ -457,6 +457,59 @@
   - Application achieves **READY FOR LOCAL MVP TESTING** status.
   - Public deployment is strictly non-authorized and deferred until future multi-user production infrastructure is approved.
 
+---
+
+## ADR-024: Post-Phase 8 User Registration, Administrator Portal, and Strict Financial Privacy Boundary
+
+- **Date**: 2026-11-16
+- **Status**: **ACCEPTED**
+- **Context**: Following Phase 8 release readiness, requirements emerged to enable self-service user registration and provide a dedicated governance portal for administrators to manage user lifecycles, inspect audit trails, and toggle platform settings without ever exposing private customer financial data.
+- **Decision**:
+  1. **Public User Registration Architecture**:
+     - Endpoint `POST /api/v1/auth/register` accepts `name`, `email`, `password`, and optional `confirm_password`.
+     - Strictly validates password complexity (minimum 8 characters, uppercase, lowercase, digit, and special character).
+     - Employs Argon2id password hashing via `pwdlib`.
+     - Assigns `UserRole.USER` by default; role elevation via public registration is technically impossible.
+     - Implements anti-enumeration protection: duplicate email registration returns a generic safe `ValidationError` ("Unable to complete registration with the provided details.") without revealing existing account status.
+     - Enforces sliding-window rate limiting on authentication operations to prevent brute-force attacks.
+     - Provides an emergency registration kill-switch (`registration_enabled` setting in `system_settings`), immediately rejecting registrations with HTTP 403 when disabled.
+  2. **Idempotent Administrator Bootstrap CLI**:
+     - Implemented `src/cli/bootstrap_admin.py` and `scripts/bootstrap_admin.bat`.
+     - Idempotent: detects existing active administrator accounts and exits cleanly without modifying database state.
+     - Interactive password input with masked prompts or cryptographically strong `--generate` flag (32-character random string).
+     - Refuses to elevate standard `USER` accounts without explicit operator confirmation (`[y/N]`).
+     - Flags bootstrapped admins with `must_change_password=True`, requiring mandatory credential rotation upon initial portal sign-in.
+     - Immutably records `ADMIN_BOOTSTRAP` event in `audit_logs`.
+  3. **Role-Based Access Control (RBAC) & Account Governance**:
+     - Introduced `UserRole` enum (`USER`, `ADMIN`).
+     - Added `require_admin` FastAPI dependency: rejects non-admin users with HTTP 403 Forbidden.
+     - Added `is_active` boolean flag on `users`: deactivated users are rejected at token generation and profile retrieval with HTTP 401 Unauthorized.
+     - Added `must_change_password` boolean flag: gated by a blocking UI barrier in Streamlit until updated.
+  4. **Dedicated Administrator Portal (`src/frontend/views/admin.py`)**:
+     - Visible strictly to authenticated operators with `ADMIN` role (`🛡️ Admin Portal` sidebar item).
+     - Provides four functional tabs:
+       * **Platform Overview**: System health, active/disabled user ratios, 30-day registration velocity, and registration kill-switch state.
+       * **User Management**: Search/filter users, toggle account active/disabled status (with self-disable prevention), and generate temporary passwords for account recovery.
+       * **Security & Audit**: Real-time inspectable audit log viewer for governance tracking.
+       * **System Settings**: Platform-wide configuration controls (e.g. registration kill-switch toggle).
+  5. **Strict Financial Privacy Boundary**:
+     - Administrator endpoints and views query only `User`, `AuditLog`, and `SystemSettings` tables.
+     - Joins or queries against financial tables (`FinancialAccount`, `Transaction`, `Budget`, `SavingsGoal`, `LoanDebt`, `InvestmentHolding`) are strictly forbidden in administrative code paths.
+     - Customer balances, account numbers, transactions, budgets, debts, and investments remain 100% private and inaccessible to platform administrators.
+  6. **Database Migration Safety**:
+     - Authored Alembic migration `f6a91c8230b1_add_user_roles_and_admin_portal_schema.py`.
+     - Non-destructive batch alteration adding `role`, `is_active`, `must_change_password` to `users`, and creating `system_settings`.
+     - Applied and validated strictly on isolated test database `data/demo_finance.db`. `data/finance.db` verified untouched with SHA-256 integrity check.
+- **Rationale**:
+  - Delivers seamless user onboarding and necessary governance tools while rigorously upholding zero-trust tenant privacy principles.
+  - Mitigates user discovery and brute-force registration risks.
+  - Protects customer financial privacy by architectural construction rather than administrative policy alone.
+- **Consequences**:
+  - System supports multi-user self-service registration and administrative governance.
+  - Automated test suite expanded to 214 tests (100% pass rate).
+  - Production deployment remains strictly non-authorized until explicit release approval is granted.
+
+
 
 
 

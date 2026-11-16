@@ -1,5 +1,6 @@
 """Unit tests for Streamlit ApiClient and frontend helper components."""
 
+import os
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
@@ -75,6 +76,95 @@ def test_api_client_login_failure() -> None:
         assert success is False
         assert result["code"] == "UNAUTHORIZED"
         assert result["message"] == "Invalid email or password."
+
+
+def test_api_client_handles_validation_errors_unpacking() -> None:
+    """Verify ApiClient extracts and unpacks granular validation errors."""
+    client = ApiClient(base_url="http://testserver/api/v1")
+    mock_resp = MagicMock(spec=httpx.Response)
+    mock_resp.status_code = 422
+    mock_resp.text = "Unprocessable Content"
+    mock_resp.json.return_value = {
+        "success": False,
+        "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "Request payload failed validation schema.",
+            "details": {
+                "validation_errors": [
+                    {
+                        "field": "body.password",
+                        "message": "Value error, Password must contain at least one uppercase letter.",
+                        "type": "value_error",
+                    }
+                ]
+            },
+        },
+    }
+
+    error_dict = client._handle_response_error(mock_resp)
+    assert error_dict["code"] == "VALIDATION_ERROR"
+    assert error_dict["message"] == "Password must contain at least one uppercase letter."
+    assert error_dict["status_code"] == 422
+
+
+def test_api_client_register_success() -> None:
+    """Verify ApiClient register returns user data on 201 Created."""
+    client = ApiClient(base_url="http://testserver/api/v1")
+    mock_resp = MagicMock(spec=httpx.Response)
+    mock_resp.status_code = 201
+    mock_resp.json.return_value = {
+        "success": True,
+        "data": {
+            "id": "new-user-id",
+            "name": "New User",
+            "email": "new@example.dev",
+            "role": "USER",
+        },
+    }
+
+    with patch.object(httpx.Client, "post", return_value=mock_resp):
+        ok, res = client.register(
+            name="New User",
+            email="new@example.dev",
+            password="StrongPassword123!",
+            confirm_password="StrongPassword123!",
+        )
+        assert ok is True
+        assert res["id"] == "new-user-id"
+        assert res["role"] == "USER"
+
+
+def test_api_client_register_validation_error() -> None:
+    """Verify ApiClient register unpacks password complexity errors."""
+    client = ApiClient(base_url="http://testserver/api/v1")
+    mock_resp = MagicMock(spec=httpx.Response)
+    mock_resp.status_code = 422
+    mock_resp.json.return_value = {
+        "success": False,
+        "error": {
+            "code": "VALIDATION_ERROR",
+            "message": "Request payload failed validation schema.",
+            "details": {
+                "validation_errors": [
+                    {
+                        "field": "body.password",
+                        "message": "Value error, Password must contain at least one uppercase letter.",
+                        "type": "value_error",
+                    }
+                ]
+            },
+        },
+    }
+
+    with patch.object(httpx.Client, "post", return_value=mock_resp):
+        ok, res = client.register(
+            name="New User",
+            email="new@example.dev",
+            password="weakpassword1!",
+            confirm_password="weakpassword1!",
+        )
+        assert ok is False
+        assert res["message"] == "Password must contain at least one uppercase letter."
 
 
 def test_api_client_get_current_user() -> None:
@@ -653,3 +743,28 @@ def test_api_client_recurring_operations() -> None:
         ok, r_res = client.resume_recurring_rule("rule-1")
         assert ok is True
         assert r_res["is_active"] is True
+
+
+def test_frontend_module_importability_from_arbitrary_cwd() -> None:
+    """Regression test ensuring frontend modules resolve repository root when launched via startup script."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    # Test from arbitrary working directory (e.g. scripts directory)
+    scripts_dir = repo_root / "scripts"
+
+    code = "import src.frontend.api_client; import src.frontend.views; print('SUCCESS')\n"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root)
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(scripts_dir),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode == 0
+    assert "SUCCESS" in result.stdout

@@ -21,15 +21,17 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 6 (Streamlit Frontend Advanced Views)**: **COMPLETE & VERIFIED**.
 - **Phase 7 (Analytics Engine, Plotly Visualizations & AI Insights)**: **COMPLETE & VERIFIED**.
 - **Phase 8 (System Hardening, Comprehensive Testing, Packaging & Release)**: **COMPLETED & VERIFIED (LOCAL MVP RELEASE CANDIDATE)**.
-  - Implemented 14 automated system hardening integration tests in `tests/integration/test_system_hardening.py` verifying negative amounts, large boundary limits, currency mismatch prevention, double-entry conservation and reversal, multi-tenant tenant isolation, unauthenticated request blocking, permanent absence of public enrollment, and backup snapshot validation.
-  - Confirmed destructive restore (`REPLACE_USER_DATA`) is strictly non-executable.
-  - Windows 11 reproducible local MVP packaging delivered in `scripts/` (`run_backend.bat`, `run_frontend.bat`, `enroll_user.bat`, `verify_system.bat`).
-  - Documented manual browser acceptance procedure in `docs/UAT_CHECKLIST.md`.
-  - Configuration hardened in `.env.example` with documented environment settings and loopback `127.0.0.1` safe defaults.
-  - Total automated test suite expanded to **192 passed tests** with **81% overall test coverage** (4,748 statements, 898 missed) in 15.2s.
-  - Ruff (0 errors, 117 files formatted), Mypy strict (0 errors in 70 files), Bandit SAST (0 issues in 10,625 lines), pip-audit (0 CVE vulnerabilities).
-  - Existing database records preserved intact: `Primary User ('user@local.dev', 'Primary User')` and `Primary Checking ('USD', 1500.00)` untouched in `data/finance.db`.
-- **Execution is halted at the Phase 8 Final Release Approval Gate. Public deployment is NOT authorized.**
+- **Post-Phase 8 Enhancement (User Registration & Dedicated Administrator Portal)**: **COMPLETED & VERIFIED**.
+  - Added self-service user registration (`POST /api/v1/auth/register`) with Argon2id password hashing, email normalization, complexity enforcement, anti-enumeration protection, and sliding-window rate limiting.
+  - Added public registration kill-switch (`SystemSettings` model with `registration_enabled` flag), allowing operators to immediately disable new registrations.
+  - Implemented idempotent administrative bootstrap CLI (`src/cli/bootstrap_admin.py` and `scripts/bootstrap_admin.bat`) with interactive masked password entry or `--generate` flag, elevation confirmation prompts, and mandatory first-login password rotation flag (`must_change_password=True`).
+  - Implemented Role-Based Access Control (RBAC) with `UserRole.USER` and `UserRole.ADMIN`, `require_admin` dependency enforcement, and `is_active` account deactivation controls.
+  - Built dedicated, secure Administrator Portal (`src/frontend/views/admin.py`) featuring Platform Overview KPIs, User Governance (search, enable/disable toggle, temporary password generation), Security Audit Viewer, and System Settings.
+  - Strict Financial Privacy Boundary enforced: administrative endpoints and views query only `User`, `AuditLog`, and `SystemSettings`. Customer transactions, accounts, balances, budgets, loans, and investment holdings remain 100% private and inaccessible to administrators.
+  - Applied non-destructive migration `f6a91c8230b1` on isolated `data/demo_finance.db`. `data/finance.db` preserved untouched with verified SHA-256 hash.
+  - Expanded automated test suite to **214 passed tests** (100% pass rate) with **79% overall test coverage** (5,379 statements, 1,139 missed) in 16.7s.
+  - Security and quality audits: Ruff (0 errors, 123 files formatted), Mypy strict (0 errors in 72 files), Bandit SAST (0 issues in 11,923 lines), pip-audit (0 CVE vulnerabilities).
+- **Execution is halted at the Release Gate. Public deployment is NOT authorized.**
 
 ---
 
@@ -376,10 +378,15 @@ To run the application locally on Windows 11 using `uv`:
    *Health Check*: Open `http://127.0.0.1:8000/health` (HTTP 200 `{"status": "healthy", "database": "connected"}`).
 
 4. **Step 4: Start the Frontend Web Application**:
-   ```cmd
-   scripts\run_frontend.bat
-   ```
-   Opens browser at `http://127.0.0.1:8501`. Enter `user@local.dev` and your enrolled password.
+   - Via PowerShell (Recommended):
+     ```powershell
+     powershell -ExecutionPolicy Bypass -File scripts\run_frontend.ps1
+     ```
+   - Or via Command Prompt:
+     ```cmd
+     scripts\run_frontend.bat
+     ```
+   Opens browser at `http://127.0.0.1:8501`. Enter your credentials or switch to "Create Account" tab. Both launchers automatically resolve the repository root, export `PYTHONPATH`, avoid duplicate processes on port 8501, and invoke Streamlit via `uv run`.
 
 5. **Step 5: Shutdown**:
    Press `Ctrl+C` in both terminal windows to gracefully terminate the backend and frontend processes.

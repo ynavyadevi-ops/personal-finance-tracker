@@ -16,6 +16,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.1] - 2026-11-16 (Post-Phase 8 Enhancement: User Registration & Dedicated Admin Portal)
+
+### Added
+- **Public User Registration (`POST /api/v1/auth/register`)**:
+  - Secure self-service account creation with normalized emails and Argon2id password hashing.
+  - Mandatory password complexity enforcement (min 8 chars, uppercase, lowercase, digit, special character).
+  - Anti-enumeration protection: duplicate registration returns generic safe failure (`ValidationError`), preventing user discovery.
+  - In-memory sliding-window IP rate limiting to mitigate brute-force registration abuse.
+  - Configurable platform kill-switch (`registration_enabled` setting): immediately rejects new registrations with HTTP 403 when deactivated.
+- **Idempotent Administrator Bootstrap CLI (`src/cli/bootstrap_admin.py` & `scripts/bootstrap_admin.bat`)**:
+  - Local CLI tool supporting `--email` and `--generate` flags for initial administrator setup.
+  - Idempotent: detects existing active admins and exits cleanly without modification.
+  - Refuses to silently elevate standard `USER` accounts without explicit interactive confirmation.
+  - Enforces `must_change_password=True` for mandatory credential rotation on first portal login.
+  - Immutably records `ADMIN_BOOTSTRAP` event in `audit_logs`.
+- **Role-Based Access Control (RBAC)**:
+  - Added `UserRole` enum (`USER`, `ADMIN`) with server-side `require_admin` dependency enforcement.
+  - Added `is_active` governance flag; deactivated accounts are blocked at login (HTTP 401) and token validation.
+  - Added `must_change_password` flag; users with temporary passwords are gated by a mandatory change screen before accessing financial tools.
+- **Dedicated Administrative Portal (`src/frontend/views/admin.py`)**:
+  - Accessible strictly to authenticated accounts with `ADMIN` role (`🛡️ Admin Portal` nav item).
+  - **Platform Overview**: Real-time KPI metrics for total users, active vs. disabled counts, 30-day velocity, and registration status.
+  - **User Governance**: Search and filter users by name, email, role, and active status; activate/deactivate user accounts; one-time temporary password generation with mandatory rotation flag. Admin cannot disable own account.
+  - **Security & Audit Log**: Real-time inspectable audit log viewer for security tracking and administrator actions.
+  - **System Settings**: Interactive toggle for the public registration kill-switch (`SystemSettings` model).
+  - **Strict Financial Privacy Boundary**: Administrative API and views are completely isolated from financial databases—no access to customer transactions, accounts, balances, budgets, loans, or investments.
+- **Database Schema Migration (`alembic/versions/f6a91c8230b1_add_user_roles_and_admin_portal_schema.py`)**:
+  - Non-destructive batch migration on `users` table adding `role`, `is_active`, `must_change_password` with safe defaults (`USER`, `1`, `0`).
+  - Added `system_settings` key-value table initialized with `registration_enabled='true'`.
+  - Applied cleanly and verified on isolated demo database `data/demo_finance.db`. `data/finance.db` preserved untouched.
+- **Automated Test Suite Expansion**:
+  - Added `tests/unit/test_cli_bootstrap_admin.py` (8 unit tests) and `tests/integration/test_auth_admin_enhancement.py` (12 integration tests).
+  - Total automated suite expanded from 192 to **214 passed tests** (100% pass rate) with **79% overall coverage** in 16.7s.
+
+---
+
 ## [0.9.0] - 2026-11-16 (Phase 8: System Hardening, Comprehensive Testing, Packaging & Release Readiness)
 
 ### Added

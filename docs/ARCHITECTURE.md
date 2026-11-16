@@ -55,6 +55,7 @@ personal-expense-tracker/
 │   │   ├── dependencies.py       # FastAPI dependency injection (DB sessions, auth)
 │   │   └── routers/              # Modular API endpoints (/api/v1)
 │   │       ├── auth.py
+│   │       ├── admin.py
 │   │       ├── accounts.py
 │   │       ├── transactions.py
 │   │       ├── budgets.py
@@ -65,7 +66,8 @@ personal-expense-tracker/
 │   │       ├── data_portability.py
 │   │       └── health.py
 │   ├── cli/                      # Administrative CLI utilities
-│   │   └── enroll.py             # Secure manual password enrollment for legacy users
+│   │   ├── enroll.py             # Secure manual password enrollment for legacy users
+│   │   └── bootstrap_admin.py    # Idempotent administrator account bootstrap
 │   ├── core/                     # Cross-Cutting Concerns
 │   │   ├── config.py             # Pydantic BaseSettings (.env loading & validation)
 │   │   ├── security.py           # Password hashing (Argon2id) & JWT handling (HS256)
@@ -78,6 +80,7 @@ personal-expense-tracker/
 │   │   ├── seed.py               # Development seeder (categories, default user, demo assets)
 │   │   └── models/               # SQLAlchemy 2.0 ORM Models
 │   │       ├── user.py
+│   │       ├── settings.py
 │   │       ├── account.py
 │   │       ├── category.py
 │   │       ├── transaction.py
@@ -127,11 +130,17 @@ personal-expense-tracker/
 │       │   └── ui.py             # Custom CSS, PALETTE tokens, format_money, render_header
 │       └── views/                # Modular view controllers
 │           ├── __init__.py
-│           ├── login.py          # Authentication portal & session establishment
+│           ├── login.py          # Authentication portal (Sign In & Sign Up tabs)
 │           ├── dashboard.py      # Account overview, isolated currency balances, cash flow
 │           ├── accounts.py       # Account directory, metadata edit, archive with confirmation
 │           ├── transactions.py   # Ledger query, income/expense entry, transfers, reversals
 │           ├── budgets.py        # Monthly category caps, utilization progress bars, alerts
+│           ├── goals.py          # Savings goals milestones & funding progress
+│           ├── loans.py          # Loan amortization liabilities & repayment schedules
+│           ├── investments.py    # Portfolio holdings, weighted cost basis & liquidations
+│           ├── recurring.py      # Recurrence schedule inspection & execution triggers
+│           ├── analytics.py      # Plotly interactive charts & AI financial insights
+│           ├── admin.py          # Administrative portal (governance, users, audit, settings)
 │           └── settings.py       # Profile display, default currency (INR), system info, logout
 ├── alembic/                      # Database Schema Migrations
 │   ├── env.py

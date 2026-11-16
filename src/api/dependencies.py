@@ -4,9 +4,9 @@ from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from src.core.exceptions import AuthenticationError
+from src.core.exceptions import AuthenticationError, PermissionDeniedError
 from src.core.security import decode_access_token
-from src.db.models.user import User
+from src.db.models.user import User, UserRole
 from src.db.session import get_db
 from src.services.account_service import AccountService
 from src.services.budget_service import BudgetService
@@ -32,13 +32,28 @@ def get_current_user(
     """Dependency verifying Bearer JWT token and resolving the authenticated User entity.
 
     Raises:
-        AuthenticationError: If token is missing, invalid, expired, or references a non-existent user.
+        AuthenticationError: If token is missing, invalid, expired, or references a disabled/non-existent user.
     """
     user_id = decode_access_token(token)
     user = db.get(User, user_id)
-    if not user:
+    if not user or not user.is_active:
         raise AuthenticationError("Authenticated user was not found or has been disabled.")
     return user
+
+
+def require_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Dependency verifying that the authenticated user possesses the ADMIN role.
+
+    Raises:
+        PermissionDeniedError: If current_user.role is not UserRole.ADMIN.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise PermissionDeniedError(
+            "Administrative privileges are required to access this resource."
+        )
+    return current_user
 
 
 def get_current_user_id(
