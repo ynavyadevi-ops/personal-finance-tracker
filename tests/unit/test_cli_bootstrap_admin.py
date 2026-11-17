@@ -246,3 +246,27 @@ def test_bootstrap_admin_weak_password(db_session: Session) -> None:
 
     assert exit_code == 1
     assert "Password must contain at least one uppercase letter" in stderr.getvalue()
+
+
+def test_bootstrap_admin_with_custom_name(db_session: Session) -> None:
+    """Verify administrator account captures custom name/username."""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+
+    exit_code = bootstrap_admin(
+        email="customadmin@local.dev",
+        name="admin",
+        generate=False,
+        session=db_session,
+        password_prompt=lambda: "AdminPass123!@#",
+        confirm_prompt=lambda: "AdminPass123!@#",
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+    assert exit_code == 0
+    admin = db_session.execute(
+        select(User).where(User.email == "customadmin@local.dev")
+    ).scalar_one()
+    assert admin.name == "admin"
+    assert admin.role == UserRole.ADMIN

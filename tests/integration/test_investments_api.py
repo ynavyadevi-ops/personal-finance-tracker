@@ -202,3 +202,38 @@ def test_cross_user_investment_isolation(
         },
     )
     assert res.status_code == 404
+
+
+def test_list_assets_catalog_api(
+    client: TestClient, unauthenticated_client: TestClient, db_session: Session
+) -> None:
+    """Verify GET /api/v1/investments/assets catalog endpoint and authentication requirement."""
+    # Ensure at least one test asset is present
+    asset = InvestmentAsset(
+        symbol="TCS",
+        name="Tata Consultancy Services",
+        asset_type=AssetType.EQUITY,
+        exchange="NSE",
+        currency="INR",
+        current_price=Decimal("4100.00"),
+        is_active=True,
+    )
+    db_session.add(asset)
+    db_session.flush()
+
+    # Unauthenticated request should fail (401)
+    unauth_res = unauthenticated_client.get("/api/v1/investments/assets")
+    assert unauth_res.status_code == 401
+
+    # Authenticated request succeeds
+    auth_res = client.get("/api/v1/investments/assets")
+    assert auth_res.status_code == 200
+    data = auth_res.json()["data"]
+    assert isinstance(data, list)
+    assert any(a["symbol"] == "TCS" for a in data)
+
+    # Filter by asset_type
+    filtered_res = client.get("/api/v1/investments/assets?asset_type=EQUITY")
+    assert filtered_res.status_code == 200
+    for a in filtered_res.json()["data"]:
+        assert a["asset_type"] == "EQUITY"

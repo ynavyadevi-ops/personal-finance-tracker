@@ -255,10 +255,33 @@ class RecurringService:
         rule = self.recurring_repo.get_by_id(rule_id=rule_id, user_id=user_id)
         if not rule:
             raise NotFoundError(f"Recurring rule with ID '{rule_id}' was not found.")
+        if rule.notes and "[CANCELLED]" in rule.notes:
+            raise ValidationError(
+                f"Recurring rule '{rule.name}' has been cancelled and cannot be resumed."
+            )
         rule.is_active = True
         self.session.commit()
         self.session.refresh(rule)
         logger.info(f"Recurring rule resumed: {rule.id}")
+        return RecurringRuleRead.model_validate(rule)
+
+    def cancel_rule(self, user_id: str, rule_id: str) -> RecurringRuleRead:
+        """Safely cancel a recurring schedule non-destructively without modifying historical records.
+
+        Sets is_active to False, stamps [CANCELLED] tag into notes, and ensures idempotency.
+        """
+        rule = self.recurring_repo.get_by_id(rule_id=rule_id, user_id=user_id)
+        if not rule:
+            raise NotFoundError(f"Recurring rule with ID '{rule_id}' was not found.")
+        rule.is_active = False
+        if rule.notes:
+            if "[CANCELLED]" not in rule.notes:
+                rule.notes = f"{rule.notes} [CANCELLED]"
+        else:
+            rule.notes = "[CANCELLED]"
+        self.session.commit()
+        self.session.refresh(rule)
+        logger.info(f"Recurring rule cancelled: {rule.id}")
         return RecurringRuleRead.model_validate(rule)
 
     def list_rules(self, user_id: str, active_only: bool = False) -> list[RecurringRuleRead]:

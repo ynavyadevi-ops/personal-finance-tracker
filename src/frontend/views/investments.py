@@ -42,6 +42,15 @@ def render_investments_view() -> None:
     acc_ok, accounts = api_client.list_accounts()
     account_map = {a["id"]: a for a in (accounts or [])}
 
+    assets_ok, assets = api_client.list_investment_assets()
+    asset_options: dict[str, str] = {}
+    if assets_ok and assets:
+        for a in assets:
+            sym = a.get("symbol", "")
+            name = a.get("name", "")
+            atype = a.get("asset_type", "EQUITY")
+            asset_options[a["id"]] = f"{sym} — {name} ({atype})"
+
     tab_holdings, tab_buy, tab_sell, tab_dividend = st.tabs(
         ["📈 Portfolio Holdings", "🛒 Buy Security", "💰 Sell Security", "💵 Record Dividend"]
     )
@@ -128,14 +137,24 @@ def render_investments_view() -> None:
 
         if not accounts:
             st.warning("Please configure an account first before trading securities.")
+        elif not asset_options:
+            st.warning(
+                "⚠️ Unable to load investment assets catalog from the server. "
+                "Please verify your connection or try again."
+            )
+            if st.button("🔄 Retry Loading Assets", key="retry_load_assets_buy"):
+                st.rerun()
         else:
             with st.form(key="buy_security_form"):
                 acc_options = {f"{a['name']} ({a['currency']})": a["id"] for a in accounts}
                 b_acc_label = st.selectbox("Trading Account *", options=list(acc_options.keys()))
 
-                b_asset_id = st.text_input(
-                    "Asset ID / UUID *",
-                    placeholder="Enter valid Asset UUID (e.g. from existing holdings or system catalog)",
+                b_asset_id = st.selectbox(
+                    "Select Asset *",
+                    options=list(asset_options.keys()),
+                    format_func=lambda aid: asset_options[aid],
+                    help="Choose a tradeable security from the catalog.",
+                    key="buy_asset_select",
                 )
 
                 col_b1, col_b2 = st.columns([1, 1])
@@ -178,14 +197,14 @@ def render_investments_view() -> None:
                 )
 
                 if submit_buy:
-                    if not b_asset_id.strip():
-                        st.error("Asset ID is required.")
+                    if not b_asset_id:
+                        st.error("Asset selection is required.")
                     elif b_qty <= 0 or b_price <= 0:
                         st.error("Quantity and price must be strictly positive.")
                     else:
                         payload = {
                             "account_id": acc_options[b_acc_label],
-                            "asset_id": b_asset_id.strip(),
+                            "asset_id": b_asset_id,
                             "quantity": str(b_qty),
                             "price_per_unit": str(b_price),
                             "fees": str(b_fees),
@@ -212,14 +231,24 @@ def render_investments_view() -> None:
 
         if not accounts:
             st.warning("Please configure an account first.")
+        elif not asset_options:
+            st.warning(
+                "⚠️ Unable to load investment assets catalog from the server. "
+                "Please verify your connection or try again."
+            )
+            if st.button("🔄 Retry Loading Assets", key="retry_load_assets_sell"):
+                st.rerun()
         else:
             with st.form(key="sell_security_form"):
                 acc_options = {f"{a['name']} ({a['currency']})": a["id"] for a in accounts}
                 s_acc_label = st.selectbox("Trading Account *", options=list(acc_options.keys()))
 
-                s_asset_id = st.text_input(
-                    "Asset ID / UUID *",
-                    placeholder="Enter valid Asset UUID to sell",
+                s_asset_id = st.selectbox(
+                    "Select Asset to Sell *",
+                    options=list(asset_options.keys()),
+                    format_func=lambda aid: asset_options[aid],
+                    help="Choose the security position to sell.",
+                    key="sell_asset_select",
                 )
 
                 col_s1, col_s2 = st.columns([1, 1])
@@ -259,14 +288,14 @@ def render_investments_view() -> None:
                 )
 
                 if submit_sell:
-                    if not s_asset_id.strip():
-                        st.error("Asset ID is required.")
+                    if not s_asset_id:
+                        st.error("Asset selection is required.")
                     elif s_qty <= 0 or s_price <= 0:
                         st.error("Quantity and selling price must be strictly positive.")
                     else:
                         payload = {
                             "account_id": acc_options[s_acc_label],
-                            "asset_id": s_asset_id.strip(),
+                            "asset_id": s_asset_id,
                             "quantity": str(s_qty),
                             "price_per_unit": str(s_price),
                             "fees": str(s_fees),
@@ -309,6 +338,13 @@ def render_investments_view() -> None:
 
         if not accounts:
             st.warning("Please configure an account first.")
+        elif not asset_options:
+            st.warning(
+                "⚠️ Unable to load investment assets catalog from the server. "
+                "Please verify your connection or try again."
+            )
+            if st.button("🔄 Retry Loading Assets", key="retry_load_assets_div"):
+                st.rerun()
         else:
             with st.form(key="record_dividend_form"):
                 acc_options = {f"{a['name']} ({a['currency']})": a["id"] for a in accounts}
@@ -316,10 +352,12 @@ def render_investments_view() -> None:
                     "Deposit Account *", options=list(acc_options.keys()), key="div_acc_sel"
                 )
 
-                d_asset_id = st.text_input(
-                    "Asset ID / UUID *",
-                    placeholder="Enter valid Asset UUID paying the dividend",
-                    key="div_asset_id_input",
+                d_asset_id = st.selectbox(
+                    "Select Asset *",
+                    options=list(asset_options.keys()),
+                    format_func=lambda aid: asset_options[aid],
+                    help="Choose the security asset paying dividend.",
+                    key="div_asset_select",
                 )
 
                 col_d1, col_d2 = st.columns([1, 1])
@@ -342,14 +380,14 @@ def render_investments_view() -> None:
                 )
 
                 if submit_div:
-                    if not d_asset_id.strip():
-                        st.error("Asset ID is required.")
+                    if not d_asset_id:
+                        st.error("Asset selection is required.")
                     elif d_amount <= 0:
                         st.error("Dividend amount must be strictly positive.")
                     else:
                         payload = {
                             "account_id": acc_options[d_acc_label],
-                            "asset_id": d_asset_id.strip(),
+                            "asset_id": d_asset_id,
                             "amount": str(d_amount),
                             "transaction_date": d_date.isoformat(),
                             "notes": d_notes.strip() if d_notes else None,

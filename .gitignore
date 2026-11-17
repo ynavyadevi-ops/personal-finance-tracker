@@ -84,3 +84,4 @@ Desktop.ini
 # Temporary files
 tmp/
 *.tmp
+scratch/

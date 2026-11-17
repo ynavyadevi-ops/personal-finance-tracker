@@ -313,9 +313,11 @@ class ApiClient:
         end_date: str | None = None,
         page: int = 1,
         page_size: int = 20,
+        limit: int | None = None,
     ) -> tuple[bool, dict[str, Any]]:
         """Fetch paginated transactions matching optional criteria."""
-        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        actual_page_size = limit if limit is not None else page_size
+        params: dict[str, Any] = {"page": page, "page_size": actual_page_size}
         if account_id:
             params["account_id"] = account_id
         if category_id:
@@ -402,6 +404,29 @@ class ApiClient:
         except Exception as e:
             logger.error(f"Error reversing transaction {transaction_id}: {e}")
             return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
+    # =========================================================================
+    # CATEGORY ENDPOINTS
+    # =========================================================================
+
+    def list_categories(
+        self, category_type: str | None = None
+    ) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch accessible categories (personal + system defaults)."""
+        url = f"{self.base_url}/categories"
+        params = {}
+        if category_type:
+            params["category_type"] = category_type
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing categories: {e}")
+            return False, []
 
     # =========================================================================
     # BUDGET ENDPOINTS
@@ -610,6 +635,25 @@ class ApiClient:
     # INVESTMENT ENDPOINTS
     # =========================================================================
 
+    def list_investment_assets(
+        self, asset_type: str | None = None, active_only: bool = True
+    ) -> tuple[bool, list[dict[str, Any]]]:
+        """Fetch investment asset catalog."""
+        url = f"{self.base_url}/investments/assets"
+        params: dict[str, Any] = {"active_only": active_only}
+        if asset_type:
+            params["asset_type"] = asset_type
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                if response.status_code == 200:
+                    items = response.json().get("data", [])
+                    return True, items
+                return False, []
+        except Exception as e:
+            logger.error(f"Error listing investment assets: {e}")
+            return False, []
+
     def list_holdings(self, account_id: str | None = None) -> tuple[bool, list[dict[str, Any]]]:
         """Retrieve active portfolio security holdings and cost basis details."""
         url = f"{self.base_url}/investments/holdings"
@@ -774,6 +818,20 @@ class ApiClient:
             logger.error(f"Error resuming recurring rule {rule_id}: {e}")
             return False, {"message": str(e), "code": "CLIENT_ERROR"}
 
+    def cancel_recurring_rule(self, rule_id: str) -> tuple[bool, dict[str, Any]]:
+        """Cancel a recurring rule non-destructively, deactivating future schedules."""
+        url = f"{self.base_url}/recurring/{rule_id}"
+        try:
+            with self._get_client() as client:
+                response = client.delete(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error cancelling recurring rule {rule_id}: {e}")
+            return False, {"message": str(e), "code": "CLIENT_ERROR"}
+
     # =========================================================================
     # ADMINISTRATIVE PORTAL ENDPOINTS
     # =========================================================================
@@ -892,6 +950,82 @@ class ApiClient:
                 return False, self._handle_response_error(response)
         except Exception as e:
             logger.error(f"Error updating platform settings: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    # =========================================================================
+    # DATA PORTABILITY & EXPORT ENDPOINTS
+    # =========================================================================
+
+    def export_transactions_csv(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        account_id: str | None = None,
+        category_id: str | None = None,
+    ) -> tuple[bool, str | dict[str, Any]]:
+        """Download user-scoped transactions as CSV."""
+        url = f"{self.base_url}/data/export/csv"
+        params: dict[str, Any] = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        if account_id:
+            params["account_id"] = account_id
+        if category_id:
+            params["category_id"] = category_id
+
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                if response.status_code == 200:
+                    return True, response.text
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error exporting CSV: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def export_transactions_xlsx(
+        self,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        account_id: str | None = None,
+        category_id: str | None = None,
+    ) -> tuple[bool, bytes | dict[str, Any]]:
+        """Download user-scoped transactions as Excel spreadsheet."""
+        url = f"{self.base_url}/data/export/xlsx"
+        params: dict[str, Any] = {}
+        if start_date:
+            params["start_date"] = start_date
+        if end_date:
+            params["end_date"] = end_date
+        if account_id:
+            params["account_id"] = account_id
+        if category_id:
+            params["category_id"] = category_id
+
+        try:
+            with self._get_client() as client:
+                response = client.get(url, params=params, headers=self._get_headers())
+                if response.status_code == 200:
+                    return True, response.content
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error exporting XLSX: {e}")
+            return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
+
+    def get_user_backup(self) -> tuple[bool, dict[str, Any]]:
+        """Download complete user-scoped JSON backup snapshot."""
+        url = f"{self.base_url}/data/backup"
+        try:
+            with self._get_client() as client:
+                response = client.get(url, headers=self._get_headers())
+                resp_json = response.json()
+                if response.status_code == 200 and resp_json.get("success"):
+                    return True, resp_json.get("data", {})
+                return False, self._handle_response_error(response)
+        except Exception as e:
+            logger.error(f"Error generating user backup: {e}")
             return False, {"message": f"Connection error: {e}", "code": "CONNECTION_ERROR"}
 
 

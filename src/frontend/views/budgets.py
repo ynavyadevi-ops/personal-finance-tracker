@@ -125,79 +125,97 @@ def render_budgets_view() -> None:
     # TAB 2: ESTABLISH MONTHLY BUDGET
     # =========================================================================
     with tab_create:
-        with st.form("create_budget_form", clear_on_submit=True):
-            st.markdown(
-                f"<h4 style='color: {PALETTE['text']}; margin-bottom: 1rem;'>Establish Category Cap</h4>",
-                unsafe_allow_html=True,
+        # Query accessible expense categories for selection
+        c_ok, categories = api_client.list_categories(category_type="EXPENSE")
+        category_options: dict[str, str] = {}
+        if c_ok and categories:
+            for cat in categories:
+                suffix = " (Default)" if cat.get("is_default") else ""
+                category_options[cat["id"]] = f"{cat.get('name', 'Unnamed')}{suffix}"
+
+        if not category_options:
+            st.warning(
+                "⚠️ Unable to load expense categories from the server. "
+                "Please verify your connection or try again."
             )
+            if st.button("🔄 Retry Loading Categories", key="retry_load_categories"):
+                st.rerun()
+        else:
+            with st.form("create_budget_form", clear_on_submit=True):
+                st.markdown(
+                    f"<h4 style='color: {PALETTE['text']}; margin-bottom: 1rem;'>Establish Category Cap</h4>",
+                    unsafe_allow_html=True,
+                )
 
-            col_cat, col_amt = st.columns(2)
-            with col_cat:
-                category_id = st.text_input(
-                    "Expense Category ID*",
-                    placeholder="e.g. 75afdbeb-2343-47a2-91ba-e8c1d7a9df98",
-                    help="UUID of the expense category to allocate budget for.",
+                col_cat, col_amt = st.columns(2)
+                with col_cat:
+                    selected_cat_id = st.selectbox(
+                        "Expense Category*",
+                        options=list(category_options.keys()),
+                        format_func=lambda cid: category_options[cid],
+                        help="Select an expense category to allocate budget for.",
+                    )
+                    category_id = selected_cat_id or ""
+                with col_amt:
+                    budget_amount = st.text_input(
+                        "Monthly Budget Cap (₹)*",
+                        placeholder="e.g. 12000.00",
+                    ).strip()
+
+                col_y, col_m, col_roll = st.columns([1, 1, 1])
+                with col_y:
+                    b_year = st.number_input(
+                        "Budget Year*", min_value=2020, max_value=2030, value=selected_year
+                    )
+                with col_m:
+                    b_month = st.selectbox(
+                        "Budget Month*",
+                        options=list(range(1, 13)),
+                        index=selected_month - 1,
+                        format_func=lambda m: date(2026, m, 1).strftime("%B"),
+                        key="create_budget_month",
+                    )
+                with col_roll:
+                    st.markdown("<div style='height: 1.75rem;'></div>", unsafe_allow_html=True)
+                    rollover = st.checkbox(
+                        "Enable Rollover", help="Carry forward unspent balance to next month."
+                    )
+
+                b_notes = st.text_input(
+                    "Notes (Optional)", placeholder="e.g. Adjusted for holiday season"
                 ).strip()
-            with col_amt:
-                budget_amount = st.text_input(
-                    "Monthly Budget Cap (₹)*",
-                    placeholder="e.g. 12000.00",
-                ).strip()
 
-            col_y, col_m, col_roll = st.columns([1, 1, 1])
-            with col_y:
-                b_year = st.number_input(
-                    "Budget Year*", min_value=2020, max_value=2030, value=selected_year
-                )
-            with col_m:
-                b_month = st.selectbox(
-                    "Budget Month*",
-                    options=list(range(1, 13)),
-                    index=selected_month - 1,
-                    format_func=lambda m: date(2026, m, 1).strftime("%B"),
-                    key="create_budget_month",
-                )
-            with col_roll:
-                st.markdown("<div style='height: 1.75rem;'></div>", unsafe_allow_html=True)
-                rollover = st.checkbox(
-                    "Enable Rollover", help="Carry forward unspent balance to next month."
-                )
-
-            b_notes = st.text_input(
-                "Notes (Optional)", placeholder="e.g. Adjusted for holiday season"
-            ).strip()
-
-            submitted_budget = st.form_submit_button("Save Budget Allocation")
-            if submitted_budget:
-                if not category_id:
-                    st.error("Expense Category ID is required.")
-                elif not budget_amount:
-                    st.error("Budget amount is required.")
-                else:
-                    try:
-                        amt_dec = Decimal(budget_amount)
-                        if amt_dec <= Decimal("0.00"):
-                            st.error("Budget amount must be strictly positive.")
-                            return
-                    except Exception:
-                        st.error("Budget amount must be a valid numerical value.")
-                        return
-
-                    b_payload = {
-                        "category_id": category_id,
-                        "year": int(b_year),
-                        "month": int(b_month),
-                        "amount": str(amt_dec),
-                        "rollover_enabled": rollover,
-                        "notes": b_notes if b_notes else None,
-                    }
-
-                    b_res_ok, b_res_data = api_client.create_budget(b_payload)
-                    if b_res_ok:
-                        st.success(
-                            f"Budget allocated: {format_money(amt_dec, 'INR')} "
-                            f"for {date(int(b_year), int(b_month), 1).strftime('%B %Y')}."
-                        )
-                        st.rerun()
+                submitted_budget = st.form_submit_button("Save Budget Allocation")
+                if submitted_budget:
+                    if not category_id:
+                        st.error("Expense Category is required.")
+                    elif not budget_amount:
+                        st.error("Budget amount is required.")
                     else:
-                        st.error(f"Failed to establish budget: {b_res_data.get('message')}")
+                        try:
+                            amt_dec = Decimal(budget_amount)
+                            if amt_dec <= Decimal("0.00"):
+                                st.error("Budget amount must be strictly positive.")
+                                return
+                        except Exception:
+                            st.error("Budget amount must be a valid numerical value.")
+                            return
+
+                        b_payload = {
+                            "category_id": category_id,
+                            "year": int(b_year),
+                            "month": int(b_month),
+                            "amount": str(amt_dec),
+                            "rollover_enabled": rollover,
+                            "notes": b_notes if b_notes else None,
+                        }
+
+                        b_res_ok, b_res_data = api_client.create_budget(b_payload)
+                        if b_res_ok:
+                            st.success(
+                                f"Budget allocated: {format_money(amt_dec, 'INR')} "
+                                f"for {date(int(b_year), int(b_month), 1).strftime('%B %Y')}."
+                            )
+                            st.rerun()
+                        else:
+                            st.error(f"Failed to establish budget: {b_res_data.get('message')}")

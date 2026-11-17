@@ -145,20 +145,27 @@ def seed_database(session: Session) -> None:
     # 3. Default Categories
     for cat_data in DEFAULT_CATEGORIES:
         stmt_cat = select(Category).where(
-            Category.user_id == user.id,
             Category.name == str(cat_data["name"]),
+            Category.is_default.is_(True),
         )
         existing_cat = session.execute(stmt_cat).scalar_one_or_none()
+        c_type = cat_data["category_type"]
+        if not isinstance(c_type, CategoryType):
+            c_type = CategoryType(str(c_type))
+
         if not existing_cat:
             category = Category(
-                user_id=user.id,
+                user_id=None,
                 name=str(cat_data["name"]),
-                category_type=CategoryType(str(cat_data["category_type"])),
+                category_type=c_type,
                 color=str(cat_data["color"]),
                 icon=str(cat_data.get("icon")),
                 is_default=True,
             )
             session.add(category)
+        elif existing_cat.user_id is not None:
+            # Upgrade existing default category to global system default (user_id = None)
+            existing_cat.user_id = None
 
     # 4. Default Sample Investment Asset
     stmt_asset = select(InvestmentAsset).where(InvestmentAsset.symbol == "NIFTYBEES")

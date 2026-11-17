@@ -121,3 +121,27 @@ def resume_rule(
     """Resume a paused recurring schedule."""
     rule = recurring_service.resume_rule(user_id=current_user.id, rule_id=rule_id)
     return GenericResponse(success=True, data=rule)
+
+
+@router.delete(
+    "/{rule_id}",
+    response_model=GenericResponse[RecurringRuleRead],
+    status_code=status.HTTP_200_OK,
+    summary="Cancel Recurring Rule",
+    description="Non-destructively cancels a recurring rule, deactivating it permanently while preserving historical ledger transactions.",
+)
+@router.post(
+    "/{rule_id}/cancel",
+    response_model=GenericResponse[RecurringRuleRead],
+    status_code=status.HTTP_200_OK,
+    summary="Cancel Recurring Rule (Alternative Endpoint)",
+    description="Non-destructively cancels a recurring rule.",
+)
+def cancel_rule(
+    rule_id: str,
+    current_user: User = Depends(get_current_user),
+    recurring_service: RecurringService = Depends(get_recurring_service),
+) -> GenericResponse[RecurringRuleRead]:
+    """Cancel an active or paused recurring schedule non-destructively."""
+    rule = recurring_service.cancel_rule(user_id=current_user.id, rule_id=rule_id)
+    return GenericResponse(success=True, data=rule)

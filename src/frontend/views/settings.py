@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from datetime import date
+
 import streamlit as st
 
 from src.frontend.api_client import api_client
@@ -107,7 +110,107 @@ def render_settings_view() -> None:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 3. Session Sign Out
+    # 3. Data Portability & Audit Exports
+    with st.container():
+        st.markdown(
+            f"""
+            <div class="fintech-card">
+                <h4 style="margin-top: 0; color: {PALETTE["text"]};">Data Portability & Backup Archives</h4>
+                <p style="color: {PALETTE["text_secondary"]}; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                    Download your user-scoped financial ledger records and complete backup snapshots in standard formats. Exports strictly exclude authentication secrets and protect against formula injection.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        col_exp1, col_exp2, col_exp3 = st.columns(3)
+        today_str = date.today().isoformat()
+
+        with col_exp1:
+            st.markdown("##### 📄 CSV Export")
+            st.caption("RFC 4180 tabular transaction records with formula injection mitigation.")
+            if st.button("Generate CSV", key="btn_gen_csv", use_container_width=True):
+                with st.spinner("Compiling CSV ledger..."):
+                    ok, res = api_client.export_transactions_csv()
+                    if ok and isinstance(res, str):
+                        st.session_state["export_csv_data"] = res
+                        st.success("CSV compiled!")
+                    else:
+                        msg = (
+                            res.get("message", "Failed to compile CSV.")
+                            if isinstance(res, dict)
+                            else "Export failed."
+                        )
+                        st.error(msg)
+
+            if st.session_state.get("export_csv_data"):
+                st.download_button(
+                    label="⬇️ Download CSV File",
+                    data=st.session_state["export_csv_data"],
+                    file_name=f"transactions_export_{today_str}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="dl_csv_file",
+                )
+
+        with col_exp2:
+            st.markdown("##### 📊 Excel (XLSX)")
+            st.caption("Formatted binary spreadsheet workbook compatible with Excel & Calc.")
+            if st.button("Generate Excel", key="btn_gen_xlsx", use_container_width=True):
+                with st.spinner("Compiling Excel workbook..."):
+                    ok, res_xlsx = api_client.export_transactions_xlsx()
+                    if ok and isinstance(res_xlsx, bytes):
+                        st.session_state["export_xlsx_data"] = res_xlsx
+                        st.success("Excel compiled!")
+                    else:
+                        msg = (
+                            res_xlsx.get("message", "Failed to compile Excel.")
+                            if isinstance(res_xlsx, dict)
+                            else "Export failed."
+                        )
+                        st.error(msg)
+
+            if st.session_state.get("export_xlsx_data"):
+                st.download_button(
+                    label="⬇️ Download Excel File",
+                    data=st.session_state["export_xlsx_data"],
+                    file_name=f"transactions_export_{today_str}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                    key="dl_xlsx_file",
+                )
+
+        with col_exp3:
+            st.markdown("##### 💾 JSON Backup")
+            st.caption("Complete user-scoped JSON snapshot archiving all 9 domain entities.")
+            if st.button("Generate Backup", key="btn_gen_json", use_container_width=True):
+                with st.spinner("Preparing JSON backup..."):
+                    ok, res_backup = api_client.get_user_backup()
+                    if ok and isinstance(res_backup, dict):
+                        st.session_state["export_json_data"] = json.dumps(res_backup, indent=2)
+                        st.success("Backup compiled!")
+                    else:
+                        msg = (
+                            res_backup.get("message", "Failed to compile backup.")
+                            if isinstance(res_backup, dict)
+                            else "Backup failed."
+                        )
+                        st.error(msg)
+
+            if st.session_state.get("export_json_data"):
+                st.download_button(
+                    label="⬇️ Download Backup File",
+                    data=st.session_state["export_json_data"],
+                    file_name=f"user_backup_{today_str}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="dl_json_file",
+                )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 4. Session Sign Out
     with st.container():
         st.markdown(
             f"<h4 style='color: {PALETTE['text']}; margin-bottom: 0.5rem;'>Sign Out</h4>",

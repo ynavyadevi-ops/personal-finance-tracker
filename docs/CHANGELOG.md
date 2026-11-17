@@ -16,6 +16,137 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.5] - 2026-11-16 (UAT Session 6C: Portfolio Polish)
+
+### Added
+- **Streamlit Settings View Data Portability & Archive Downloads**:
+  - Implemented 3-column download action cards in `src/frontend/views/settings.py` for CSV, Excel (XLSX), and JSON backup archives.
+  - Connected buttons to `ApiClient.export_transactions_csv`, `ApiClient.export_transactions_xlsx`, and `ApiClient.get_user_backup` in `src/frontend/api_client.py`.
+  - Added user-friendly loading indicators (`st.spinner`), error alerts, and timestamped filenames (`transactions_export_{date}.csv`, `transactions_export_{date}.xlsx`, `user_backup_{date}.json`).
+  - Added unit test `test_render_settings_view_export_download_triggers` in `tests/unit/test_frontend_views.py`.
+- **Reusable Disposable Recruiter Portfolio Demo Dataset (`scripts/seed_demo_recruiter.py`)**:
+  - Authored standalone seeding script targeting demo account `demo.recruiter@example.com` (isolated in `data/demo_finance.db`).
+  - Seeded 4 realistic financial accounts: HDFC Salary Checking (₹68,500), ICICI Savings (₹83,000), Zerodha Demat (₹50,000), HDFC Regalia CC (-₹14,500).
+  - Seeded monthly salary income (₹150,000), realistic expenses (Apartment Rent ₹35,000, Groceries ₹12,500, Electricity ₹3,200, Dining ₹4,500, Internet ₹1,200), and transfers (₹25,000 to Savings, ₹50,000 to Demat).
+  - Seeded 3 monthly budgets: Housing & Utilities (₹40,000 cap), Groceries & Dining (₹20,000 cap), Transportation & Shopping (₹10,000 cap).
+  - Seeded an Emergency Fund savings goal (target ₹300,000, current ₹120,000, 40.0% progress).
+  - Seeded an active monthly broadband recurring rule (₹1,199).
+  - Seeded an ICICI Home Renovation loan (₹200,000 principal at 10.5% p.a. for 24 months, ₹9,276.10 monthly EMI, ₹183,200 balance remaining).
+  - Seeded NIFTYBEES ETF equity holdings (200 units at ₹250.00 cost basis) and ₹500 dividend receipt.
+  - Ensured zero modification or disturbance to existing user accounts (`uat.financial@example.com`, `admin@local.dev`, `uat.lifecycle@example.com`).
+
+### Changed
+- **README.md Overhaul**:
+  - Restructured `README.md` to accurately represent completed Phases 0–8 and UAT Sessions 1–6.
+  - Removed unsupported claims regarding licensing, cloud deployment readiness, and coverage metrics.
+  - Added Mermaid full-stack architecture diagram and complete documentation index.
+  - Added verified local startup instructions for FastAPI backend, Streamlit frontend, administrative bootstrapping, and recruiter demo seeding.
+
+### Security
+- **Data Portability Privacy Verification**:
+  - Validated that exports (`/api/v1/data/export/csv`, `/xlsx`, `/backup`) strictly filter by authenticated user ID (`where(Transaction.user_id == user_id)`).
+  - Validated CSV formula injection prevention prepending `'` to `=`, `+`, `-`, `@`.
+  - Confirmed JSON backup payload contains 0 password hashes, JWTs, or cross-tenant records.
+
+### Verified
+- **Quality & Regression Testing**:
+  - Full automated pytest suite: 231 passed, 0 failed, 1 warning (deprecation notice for datetime.utcnow).
+  - Ruff code linting & formatting: 0 errors across `src` and `tests`.
+  - Mypy static type checking: 0 errors across 91 source files (`mypy --strict src`).
+  - Bandit SAST security audit: 0 issues across 12,354 lines of code.
+  - pip-audit vulnerability check: 0 known CVEs across all installed dependencies.
+  - Database integrity: `data/finance.db` SHA-256 hash verified identical to baseline (`C7F03B0ADD08361A740AD688F7776FF62BA665D38EAB38BED615C4574E861EC7`).
+
+
+---
+
+## [0.9.4] - 2026-11-16 (UAT Session 6: Final System Validation & Release Readiness)
+
+### Verified
+- **Full Analytics Reconciliation (Phase B)**:
+  - Verified deterministic cash flow calculations: Total Income ₹10,000, Total Expenses ₹2,000, Net Cash Flow ₹8,000, Savings Rate 80.00%.
+  - Verified strict transfer exclusion: Inter-account transfers (₹3,000) are excluded from income and expense metrics.
+  - Verified currency isolation: INR and USD metrics remain strictly separated with zero silent cross-currency mixing.
+  - Verified budget utilization: Groceries & Dining cap ₹5,000, spent ₹2,000, remaining ₹3,000 (40.0% utilization, status NORMAL).
+  - Verified savings goal progress: Milestone target ₹20,000, contributed ₹3,000 (15.0% progress).
+- **Data Export & Backup Portability (Phases C & D)**:
+  - Validated CSV export (`GET /api/v1/data/export/csv`) with RFC 4180 compliance, formula injection defense (`'`, `=`, `@`), user ownership scoping, and zero credential leakage.
+  - Validated XLSX binary export (`GET /api/v1/data/export/xlsx`) readable via openpyxl.
+  - Confirmed PDF export is NOT IMPLEMENTED in the REST API.
+  - Validated complete user-scoped JSON backup snapshot generation (`GET /api/v1/data/backup`) across 9 domain entity tables without password/credential hashes.
+  - Verified dry-run backup validation (`POST /api/v1/data/backup/validate`).
+  - Confirmed destructive database restore is disabled by design (ADR-016) to prevent ledger corruption.
+- **Security & Authorization Controls (Phase E)**:
+  - Verified 401 Unauthorized for expired JWTs and malformed tokens.
+  - Verified access rejection for disabled user accounts.
+  - Verified RBAC enforcement: ordinary users strictly forbidden from admin endpoints (HTTP 403).
+  - Verified administrative financial privacy boundary: administrator queries to financial transactions return zero customer records.
+  - Verified cross-user resource isolation: users cannot access or mutate each other's accounts or recurring rules (HTTP 404).
+  - Verified recurring cancellation notes bypass defense: recurring rules have no generic PATCH/PUT update endpoints; cancellation state cannot be tampered with via notes.
+- **Quality & Release Gates (Phases F & G)**:
+  - Pytest full suite: 230 passed, 0 failed, 0 skipped, 0 errors in 12.58s.
+  - Static type checking: Mypy strict passed (0 errors across 91 source files).
+  - Code formatting: Ruff passed (0 errors across `src` and `tests`).
+  - SAST Security: Bandit passed (0 vulnerabilities in 12,195 lines).
+  - Dependency Audit: pip-audit passed (0 known CVEs).
+  - Production database integrity: `data/finance.db` SHA-256 hash verified identical to baseline (`C7F03B0ADD08361A740AD688F7776FF62BA665D38EAB38BED615C4574E861EC7`).
+  - Execution gate halted; public deployment remains unauthorized.
+
+---
+
+## [0.9.3] - 2026-11-16 (UAT Session 5 & 5A: Investment Catalog, Recurring Cancellation & Credential Hardening)
+
+### Security
+- **Credential Hygiene & Secret Shielding**:
+  - Removed all hardcoded test credentials from scratch scripts; replaced with interactive prompts, environment variables (`TEST_USER_B_PASSWORD`), and cryptographically secure tokens.
+  - Added `scratch/` directory to `.gitignore` to prevent test scripts or credentials from being staged.
+  - Verified Git commit log history: confirmed zero exposure of test credentials or JWT tokens in repository history.
+  - Rotated password for test user `uat.session5@example.com` in `data/demo_finance.db`.
+  - Added strict database isolation guard to test scripts (`"demo_finance.db" not in settings.DATABASE_URL` check).
+
+### Added
+- **Investment Asset Catalog (`GET /api/v1/investments/assets`)**:
+  - Implemented read-only asset catalog query endpoint supporting optional `asset_type` filtering (`EQUITY`, `MUTUAL_FUND`, `BOND`, `ETF`, `CRYPTO`).
+  - Added `InvestmentService.list_assets` and `ApiClient.list_investment_assets`.
+  - Updated Streamlit UI (`src/frontend/views/investments.py`) to replace raw Asset UUID text input with searchable `st.selectbox` for Buy, Sell, and Dividend operations.
+  - Added user-friendly catalog retrieval failure notice with an interactive "Retry Loading Assets" button.
+- **Non-Destructive Recurring Cancellation (`DELETE /api/v1/recurring/{rule_id}` & `POST /api/v1/recurring/{rule_id}/cancel`)**:
+  - Implemented soft-cancellation setting `is_active = False` with `[CANCELLED]` tag, permanently deactivating future schedule execution while preserving historical ledger transactions.
+  - Enforced idempotency on repeated cancellation requests.
+  - Added strict validation preventing execution or resumption of cancelled rules.
+  - Updated Streamlit UI (`src/frontend/views/recurring.py`) to display `CANCELLED` status badge and interactive "Cancel" button.
+
+### Fixed
+- **Type Annotations & Linter Strictness**:
+  - Fixed generic dictionary annotation in `src/frontend/views/dashboard.py`.
+  - Added `limit` compatibility parameter to `ApiClient.list_transactions` in `src/frontend/api_client.py`.
+  - Verified 100% compliance with `mypy --strict src` (0 errors across 91 files) and `ruff check`.
+
+---
+
+## [0.9.2] - 2026-11-16 (UAT Session 4A: Default Category Multi-Tenant Scoping Repair)
+
+### Fixed
+- **System Default Category Multi-Tenant Scoping**:
+  - Remediated root cause of budget creation failure (HTTP 404): seeded default categories were previously bound to legacy `'default-user-id'`.
+  - Updated `src/db/seed.py` so standard default categories are persisted with `user_id = None` and `is_default = True`, making them accessible to all authenticated users.
+  - Safely released legacy user scoping on existing default categories in `data/demo_finance.db` (`UPDATE categories SET user_id = NULL WHERE is_default = 1 AND user_id = 'default-user-id'`).
+  - Preserved all 13 original category IDs, names, types, colors, icons, and references.
+
+### Added
+- **Categories API Endpoint (`GET /api/v1/categories`)**:
+  - Exposes `list_categories` endpoint supporting optional filtering by `category_type` (`INCOME` / `EXPENSE`).
+  - Returns user-accessible personal categories combined with global system default categories.
+  - Strictly preserves tenant privacy: users cannot view other users' custom categories.
+- **Frontend Category Selection & Dynamic Dropdown**:
+  - Added `api_client.list_categories` in `src/frontend/api_client.py`.
+  - Updated `src/frontend/views/budgets.py` to replace raw UUID entry with a user-friendly dropdown populated with available expense categories (identifying system defaults).
+- **Automated Test Coverage**:
+  - Added `tests/unit/test_category_access.py` covering multi-tenant access, private category isolation, idempotency, transaction validity, and budget type constraints.
+  - Added `tests/integration/test_categories_api.py` validating the categories REST API endpoint.
+
+---
+
 ## [0.9.1] - 2026-11-16 (Post-Phase 8 Enhancement: User Registration & Dedicated Admin Portal)
 
 ### Added

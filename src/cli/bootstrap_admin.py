@@ -35,6 +35,7 @@ def generate_secure_password(length: int = 32) -> str:
 
 def bootstrap_admin(
     email: str = "admin@local.dev",
+    name: str = "Administrator",
     generate: bool = False,
     session: Session | None = None,
     password_prompt: Callable[[], str] = lambda: getpass.getpass("Enter administrator password: "),
@@ -144,7 +145,7 @@ def bootstrap_admin(
         else:
             new_user = User(
                 email=clean_email,
-                name="Administrator",
+                name=name.strip() or "Administrator",
                 role=UserRole.ADMIN,
                 is_active=True,
                 must_change_password=True,
@@ -197,6 +198,11 @@ def main(
         help="Email address for administrator account (default: admin@local.dev)",
     )
     parser.add_argument(
+        "--name",
+        default="admin",
+        help="Full name or username for administrator account (default: admin)",
+    )
+    parser.add_argument(
         "--generate",
         action="store_true",
         help="Generate a cryptographically secure random password instead of prompting.",
@@ -209,6 +215,7 @@ def main(
 
     return bootstrap_admin(
         email=parsed.email,
+        name=parsed.name,
         generate=parsed.generate,
         session=session,
         stdout=stdout,

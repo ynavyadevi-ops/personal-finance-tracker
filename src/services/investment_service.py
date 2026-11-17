@@ -12,10 +12,11 @@ from src.core.exceptions import (
 )
 from src.core.logging import logger
 from src.core.money import to_decimal
-from src.db.models.investment import InvestmentTxType
+from src.db.models.investment import AssetType, InvestmentTxType
 from src.repositories.account_repo import AccountRepository
 from src.repositories.investment_repo import InvestmentRepository
 from src.schemas.investment import (
+    InvestmentAssetRead,
     InvestmentBuyRequest,
     InvestmentHoldingRead,
     InvestmentSellRequest,
@@ -252,3 +253,10 @@ class InvestmentService:
         else:
             holdings = self.investment_repo.list_holdings_by_user(user_id=user_id)
         return [InvestmentHoldingRead.model_validate(h) for h in holdings]
+
+    def list_assets(
+        self, asset_type: AssetType | None = None, active_only: bool = True
+    ) -> list[InvestmentAssetRead]:
+        """Fetch active tradeable investment securities catalog."""
+        assets = self.investment_repo.list_assets(asset_type=asset_type, active_only=active_only)
+        return [InvestmentAssetRead.model_validate(a) for a in assets]

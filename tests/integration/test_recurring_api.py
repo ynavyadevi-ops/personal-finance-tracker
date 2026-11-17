@@ -137,3 +137,82 @@ def test_cross_user_recurring_isolation(
         headers={"Authorization": f"Bearer {token_b}"},
     )
     assert exec_res.status_code == 404
+
+
+def test_cancel_recurring_rule_api(client: TestClient, db_session: Session) -> None:
+    """Verify DELETE /api/v1/recurring/{id} and POST /api/v1/recurring/{id}/cancel."""
+    acc = FinancialAccount(
+        user_id="default-user-id",
+        name="Bills Acc",
+        account_type=AccountType.CHECKING,
+        currency="INR",
+        opening_balance=Decimal("5000.00"),
+    )
+    db_session.add(acc)
+    db_session.flush()
+
+    create_res = client.post(
+        "/api/v1/recurring",
+        json={
+            "account_id": acc.id,
+            "name": "Cloud Storage",
+            "amount": "130.00",
+            "frequency": "MONTHLY",
+        },
+    )
+    rule_id = create_res.json()["data"]["id"]
+
+    # Delete (soft cancel)
+    del_res = client.delete(f"/api/v1/recurring/{rule_id}")
+    assert del_res.status_code == 200
+    assert del_res.json()["data"]["is_active"] is False
+    assert "[CANCELLED]" in (del_res.json()["data"]["notes"] or "")
+
+    # Post /cancel endpoint (alternative)
+    cancel_res = client.post(f"/api/v1/recurring/{rule_id}/cancel")
+    assert cancel_res.status_code == 200
+    assert cancel_res.json()["data"]["is_active"] is False
+
+    # Attempting to resume a cancelled rule fails with 422
+    resume_res = client.post(f"/api/v1/recurring/{rule_id}/resume")
+    assert resume_res.status_code == 422
+
+
+def test_cross_user_cancel_recurring_isolation(
+    unauthenticated_client: TestClient, db_session: Session
+) -> None:
+    """Verify user B cannot cancel user A's recurring rule."""
+    user_a = User(id="user-rec-can-a", name="User A", email="can_a@iso.dev")
+    user_b = User(id="user-rec-can-b", name="User B", email="can_b@iso.dev")
+    acc_a = FinancialAccount(
+        user_id=user_a.id,
+        name="A Bills",
+        account_type=AccountType.CHECKING,
+        currency="INR",
+        opening_balance=Decimal("5000.00"),
+    )
+    db_session.add_all([user_a, user_b, acc_a])
+    db_session.flush()
+
+    token_a = create_access_token(user_a.id)
+    token_b = create_access_token(user_b.id)
+
+    # User A creates rule
+    rule_res = unauthenticated_client.post(
+        "/api/v1/recurring",
+        headers={"Authorization": f"Bearer {token_a}"},
+        json={
+            "account_id": acc_a.id,
+            "name": "User A Magazine",
+            "amount": "250.00",
+            "frequency": "MONTHLY",
+        },
+    )
+    rule_id = rule_res.json()["data"]["id"]
+
+    # User B attempts to cancel User A's rule -> 404
+    del_res = unauthenticated_client.delete(
+        f"/api/v1/recurring/{rule_id}",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert del_res.status_code == 404

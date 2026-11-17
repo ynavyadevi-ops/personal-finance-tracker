@@ -215,3 +215,47 @@ def test_pause_and_resume_rule(
     # Resume
     resumed = service.resume_rule(sample_user.id, rule.id)
     assert resumed.is_active is True
+
+
+def test_cancel_recurring_rule(
+    db_session: Session,
+    sample_user: User,
+    sample_account: FinancialAccount,
+    utility_cat: Category,
+) -> None:
+    """Verify non-destructive cancellation of recurring rule."""
+    service = RecurringService(db_session)
+    rule = service.create_rule(
+        sample_user.id,
+        RecurringRuleCreate(
+            name="Streaming Service",
+            transaction_type=TransactionType.EXPENSE,
+            amount=Decimal("499.00"),
+            frequency=Frequency.MONTHLY,
+            start_date=date(2026, 11, 1),
+            category_id=utility_cat.id,
+            account_id=sample_account.id,
+        ),
+    )
+    assert rule.is_active is True
+
+    # 1. Cancel rule
+    cancelled = service.cancel_rule(sample_user.id, rule.id)
+    assert cancelled.is_active is False
+    assert "[CANCELLED]" in (cancelled.notes or "")
+
+    # 2. Idempotent re-cancellation
+    re_cancelled = service.cancel_rule(sample_user.id, rule.id)
+    assert re_cancelled.is_active is False
+    # Should not duplicate [CANCELLED] tag
+    assert (re_cancelled.notes or "").count("[CANCELLED]") == 1
+
+    # 3. Execution of cancelled rule must be rejected
+    with pytest.raises(ValidationError) as exc_exec:
+        service.execute_due_rule(sample_user.id, rule.id)
+    assert "is paused" in exc_exec.value.message or "cannot be executed" in exc_exec.value.message
+
+    # 4. Resuming a cancelled rule must be rejected
+    with pytest.raises(ValidationError) as exc_resume:
+        service.resume_rule(sample_user.id, rule.id)
+    assert "cancelled and cannot be resumed" in exc_resume.value.message

@@ -3,10 +3,12 @@
 from fastapi import APIRouter, Depends, Query, status
 
 from src.api.dependencies import get_current_user, get_investment_service
+from src.db.models.investment import AssetType
 from src.db.models.user import User
 from src.schemas.common import GenericResponse
 from src.schemas.investment import (
     DividendRequest,
+    InvestmentAssetRead,
     InvestmentBuyRequest,
     InvestmentHoldingRead,
     InvestmentSellRequest,
@@ -74,6 +76,24 @@ def record_dividend(
         notes=payload.notes,
     )
     return GenericResponse(success=True, data=inv_tx)
+
+
+@router.get(
+    "/assets",
+    response_model=GenericResponse[list[InvestmentAssetRead]],
+    status_code=status.HTTP_200_OK,
+    summary="List Investment Assets Catalog",
+    description="Retrieves the catalog of investment assets (e.g., stocks, ETFs, mutual funds).",
+)
+def list_assets(
+    asset_type: AssetType | None = Query(None, description="Optional asset type filter"),
+    active_only: bool = Query(True, description="Filter for active assets only"),
+    current_user: User = Depends(get_current_user),
+    inv_service: InvestmentService = Depends(get_investment_service),
+) -> GenericResponse[list[InvestmentAssetRead]]:
+    """List investment assets from the catalog."""
+    assets = inv_service.list_assets(asset_type=asset_type, active_only=active_only)
+    return GenericResponse(success=True, data=assets)
 
 
 @router.get(

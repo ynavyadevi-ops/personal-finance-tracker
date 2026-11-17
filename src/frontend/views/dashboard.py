@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 import pandas as pd
 import streamlit as st
@@ -105,7 +106,7 @@ def render_dashboard_view() -> None:
     tx_ok, tx_data = api_client.list_transactions(page=1, page_size=100)
     monthly_income: dict[str, Decimal] = defaultdict(lambda: Decimal("0.00"))
     monthly_expense: dict[str, Decimal] = defaultdict(lambda: Decimal("0.00"))
-    transactions_list: list[dict] = []
+    transactions_list: list[dict[str, Any]] = []
 
     if tx_ok and isinstance(tx_data, dict):
         transactions_list = tx_data.get("items", [])

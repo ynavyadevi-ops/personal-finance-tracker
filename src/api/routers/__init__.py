@@ -4,6 +4,7 @@ from src.api.routers.accounts import router as accounts_router
 from src.api.routers.admin import router as admin_router
 from src.api.routers.auth import router as auth_router
 from src.api.routers.budgets import router as budgets_router
+from src.api.routers.categories import router as categories_router
 from src.api.routers.data_portability import router as data_portability_router
 from src.api.routers.goals import router as goals_router
 from src.api.routers.health import router as health_router
@@ -17,6 +18,7 @@ __all__ = [
     "admin_router",
     "auth_router",
     "budgets_router",
+    "categories_router",
     "data_portability_router",
     "goals_router",
     "health_router",

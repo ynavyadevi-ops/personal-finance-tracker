@@ -509,6 +509,58 @@
   - Automated test suite expanded to 214 tests (100% pass rate).
   - Production deployment remains strictly non-authorized until explicit release approval is granted.
 
+---
+
+## ADR-026: Multi-Tenant Scoping for System Default Categories
+
+- **Date**: 2026-11-16
+- **Status**: **ACCEPTED**
+- **Context**: During UAT Session 4, budget creation failed with HTTP 404 because default categories seeded in `data/demo_finance.db` were assigned to `default-user-id` rather than global (`user_id = NULL`), preventing newly registered users from establishing budgets on system categories like "Groceries & Dining".
+- **Decision**:
+  1. **Global Scoping for System Defaults**: Set `user_id = None` and `is_default = True` for the 13 standard system categories in `src/db/seed.py`.
+  2. **Non-Destructive Database Scoping Update**: Executed `UPDATE categories SET user_id = NULL WHERE is_default = 1 AND user_id = 'default-user-id'` on `data/demo_finance.db`, preserving all original UUIDs, names, types, colors, and icons.
+  3. **Categories API Endpoint**: Added `GET /api/v1/categories` returning accessible categories (`Category.user_id == current_user.id OR Category.user_id.is_(None)`).
+  4. **Frontend UI Dropdown**: Upgraded `src/frontend/views/budgets.py` to allow users to select from accessible expense categories directly from a dropdown instead of manual UUID entry.
+  5. **Strict Isolation Preserved**: Custom user-created categories remain strictly scoped to their owning user ID.
+- **Rationale**:
+  - Eliminates category 404 blockers across multi-user environments while ensuring zero cross-tenant leakage of private categories.
+  - Requires no schema changes or Alembic migrations as `Category.user_id` was already defined as nullable.
+- **Consequences**:
+  - All registered users have immediate access to default income and expense categories.
+  - 44/44 regression and integration tests passed.
+
+---
+
+## ADR-027: Read-Only Investment Asset Catalog and Non-Destructive Recurring Cancellation
+
+- **Date**: 2026-11-16
+- **Status**: **ACCEPTED**
+- **Context**: During UAT Session 5, two usability and functional gaps were identified:
+  1. Securities trading (Buy, Sell, Record Dividend) required users to manually enter raw Asset UUIDs due to the absence of a catalog query endpoint and UI selection component.
+  2. Recurring transaction management had pause/resume controls but lacked a cancellation mechanism, leaving deletion of recurring rules blocked.
+- **Decision**:
+  1. **Investment Asset Catalog (`GET /api/v1/investments/assets`)**:
+     - Exposed `list_assets` in `src/api/routers/investments.py` returning active tradeable securities from `InvestmentAsset` catalog, with optional `asset_type` filtering.
+     - Updated Streamlit UI (`src/frontend/views/investments.py`) to replace manual UUID input fields with searchable `st.selectbox` components.
+     - Added user-facing error handling and an interactive "Retry Loading Assets" button when catalog retrieval encounters network or client issues.
+  2. **Non-Destructive Recurring Rule Cancellation (`DELETE /api/v1/recurring/{rule_id}`)**:
+     - Implemented soft-cancellation in `RecurringService.cancel_rule`: sets `is_active = False` and stamps `[CANCELLED]` tag into `notes`.
+     - Preserves all historical ledger postings and transaction foreign key associations.
+     - Enforces idempotency for duplicate cancellation requests.
+     - Prevents execution or reactivation (`POST /recurring/{rule_id}/resume`) of cancelled rules.
+     - Provided both `DELETE /{rule_id}` and `POST /{rule_id}/cancel` endpoints for API flexibility.
+  3. **Credential & Test Isolation Hardening**:
+     - Removed hardcoded credentials from test scripts and gitignored `scratch/` directory.
+     - Enforced mandatory check preventing execution against `data/finance.db`.
+- **Rationale**:
+  - Enhances user experience by removing UUID friction while maintaining strict double-entry ledger audit integrity and data immutability.
+  - Required zero database migrations: leverages existing `is_active` boolean on `RecurringRule`.
+- **Consequences**:
+  - Full investment trading and dividend recording workflows operate seamlessly from the UI.
+  - Recurring rules can be cancelled safely without data corruption or orphan records.
+  - Full automated test suite passes (230/230 tests, 100% pass rate).
+
+
 
 
 

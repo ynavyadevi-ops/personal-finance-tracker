@@ -13,6 +13,7 @@ from src.api.routers import (
     admin_router,
     auth_router,
     budgets_router,
+    categories_router,
     data_portability_router,
     goals_router,
     health_router,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(accounts_router, prefix=settings.API_V1_PREFIX)
     app.include_router(transactions_router, prefix=settings.API_V1_PREFIX)
     app.include_router(budgets_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(categories_router, prefix=settings.API_V1_PREFIX)
     app.include_router(goals_router, prefix=settings.API_V1_PREFIX)
     app.include_router(loans_router, prefix=settings.API_V1_PREFIX)
     app.include_router(investments_router, prefix=settings.API_V1_PREFIX)

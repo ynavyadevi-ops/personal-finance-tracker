@@ -226,3 +226,33 @@ def test_record_dividend_success(
     assert div_tx.id is not None
     assert div_tx.transaction_type == InvestmentTxType.DIVIDEND
     assert div_tx.total_amount == Decimal("350.00")
+
+
+def test_list_assets_catalog(db_session: Session, sample_asset: InvestmentAsset) -> None:
+    """Verify fetching tradeable asset catalog and filtering by asset type."""
+    service = InvestmentService(db_session)
+
+    # Add a mutual fund asset
+    mf_asset = InvestmentAsset(
+        id=str(uuid.uuid4()),
+        symbol="NIFTYBEES",
+        name="Nippon India Nifty 50 ETF",
+        asset_type=AssetType.MUTUAL_FUND,
+        exchange="NSE",
+        currency="INR",
+        current_price=Decimal("250.00"),
+    )
+    db_session.add(mf_asset)
+    db_session.flush()
+
+    # List all active assets
+    all_assets = service.list_assets()
+    symbols = [a.symbol for a in all_assets]
+    assert "RELIANCE" in symbols
+    assert "NIFTYBEES" in symbols
+
+    # List with asset_type filter
+    equities = service.list_assets(asset_type=AssetType.EQUITY)
+    assert all(a.asset_type == AssetType.EQUITY for a in equities)
+    assert "RELIANCE" in [a.symbol for a in equities]
+    assert "NIFTYBEES" not in [a.symbol for a in equities]

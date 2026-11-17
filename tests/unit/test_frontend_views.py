@@ -208,8 +208,30 @@ def test_render_settings_view_displays_profile_and_currency() -> None:
         patch("streamlit.button", return_value=False) as mock_btn,
     ):
         render_settings_view()
-        mock_btn.assert_called_once()
-        assert "Log Out" in mock_btn.call_args[0][0]
+        assert mock_btn.call_count >= 1
+        assert any("Log Out" in call[0][0] for call in mock_btn.call_args_list)
+
+
+def test_render_settings_view_export_download_triggers() -> None:
+    """Verify settings view provides CSV, Excel, and JSON backup export buttons."""
+    mock_session_state = {
+        "user_profile": {"id": "test-uuid-456", "name": "Jane", "email": "jane@test.dev"},
+        "export_csv_data": "Date,Amount\n2026-11-01,100",
+        "export_xlsx_data": b"mock_xlsx_bytes",
+        "export_json_data": '{"schema_version": "1.0.0"}',
+    }
+    with (
+        patch("streamlit.session_state", mock_session_state),
+        patch("streamlit.button", return_value=False),
+        patch("streamlit.download_button") as mock_dl,
+    ):
+        render_settings_view()
+        # Verify 3 export download buttons rendered when data is prepared
+        assert mock_dl.call_count == 3
+        dl_mimes = [call[1]["mime"] for call in mock_dl.call_args_list]
+        assert "text/csv" in dl_mimes
+        assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in dl_mimes
+        assert "application/json" in dl_mimes
 
 
 def test_render_goals_view() -> None:
@@ -348,6 +370,59 @@ def test_render_investments_view() -> None:
         patch("streamlit.columns", side_effect=_mock_columns),
     ):
         render_investments_view()
+
+
+def test_render_investments_view_asset_catalog_error_shows_warning_and_retry() -> None:
+    """Verify investments view renders a warning and retry button when asset catalog fails."""
+    mock_accounts = [{"id": "acc-1", "name": "Trading Acc", "currency": "INR"}]
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_accounts", return_value=(True, mock_accounts)
+        ),
+        patch("src.frontend.api_client.api_client.list_holdings", return_value=(True, [])),
+        patch(
+            "src.frontend.api_client.api_client.list_investment_assets", return_value=(False, [])
+        ),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock(), MagicMock()]),
+        patch("streamlit.container", return_value=MagicMock()),
+        patch("streamlit.warning") as mock_warn,
+        patch("streamlit.button", return_value=False) as mock_btn,
+    ):
+        render_investments_view()
+        # Warning shown in buy/sell/dividend tabs
+        assert mock_warn.call_count >= 1
+        assert "Unable to load investment assets catalog" in mock_warn.call_args[0][0]
+        # Retry button present
+        assert mock_btn.call_count >= 1
+
+
+def test_render_investments_view_uses_asset_selectbox() -> None:
+    """Verify investments buy/sell/dividend tabs use selectbox populated with assets."""
+    mock_accounts = [{"id": "acc-1", "name": "Trading Acc", "currency": "INR"}]
+    mock_assets = [
+        {"id": "ast-1", "symbol": "INFY", "name": "Infosys Ltd", "asset_type": "EQUITY"}
+    ]
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_accounts", return_value=(True, mock_accounts)
+        ),
+        patch("src.frontend.api_client.api_client.list_holdings", return_value=(True, [])),
+        patch(
+            "src.frontend.api_client.api_client.list_investment_assets",
+            return_value=(True, mock_assets),
+        ),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock(), MagicMock(), MagicMock()]),
+        patch("streamlit.form", return_value=MagicMock()),
+        patch("streamlit.selectbox") as mock_select,
+        patch("streamlit.columns", side_effect=_mock_columns),
+        patch("streamlit.number_input", return_value=1.0),
+        patch("streamlit.date_input"),
+        patch("streamlit.text_area"),
+        patch("streamlit.form_submit_button", return_value=False),
+    ):
+        render_investments_view()
+        # Selectbox used for accounts and assets
+        assert mock_select.call_count >= 2
 
 
 def test_render_recurring_view() -> None:
@@ -496,3 +571,53 @@ def test_render_admin_view_renders_tabs_for_admin() -> None:
     ):
         render_admin_view()
         assert mock_metric.call_count >= 4
+
+
+def test_render_budgets_view_shows_warning_and_retry_when_categories_fail() -> None:
+    """Verify budget creation displays warning and retry button when category fetching fails."""
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_budgets_for_period",
+            return_value=(True, []),
+        ),
+        patch(
+            "src.frontend.api_client.api_client.list_categories",
+            return_value=(False, []),
+        ),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+        patch("streamlit.warning") as mock_warn,
+        patch("streamlit.button") as mock_button,
+        patch("streamlit.form") as mock_form,
+    ):
+        render_budgets_view()
+        mock_warn.assert_called_once()
+        assert "Unable to load expense categories" in mock_warn.call_args[0][0]
+        mock_button.assert_called_once()
+        assert "Retry Loading Categories" in mock_button.call_args[0][0]
+        # Form must NOT be created when categories are unavailable
+        mock_form.assert_not_called()
+
+
+def test_render_budgets_view_shows_category_dropdown_when_categories_available() -> None:
+    """Verify budget creation provides selectbox when categories are loaded successfully."""
+    mock_categories = [
+        {"id": "cat-1", "name": "Groceries", "is_default": True},
+        {"id": "cat-2", "name": "Custom", "is_default": False},
+    ]
+    with (
+        patch(
+            "src.frontend.api_client.api_client.list_budgets_for_period",
+            return_value=(True, []),
+        ),
+        patch(
+            "src.frontend.api_client.api_client.list_categories",
+            return_value=(True, mock_categories),
+        ),
+        patch("streamlit.tabs", return_value=[MagicMock(), MagicMock()]),
+        patch("streamlit.warning") as mock_warn,
+        patch("streamlit.selectbox") as mock_select,
+        patch("streamlit.form", return_value=MagicMock()),
+    ):
+        render_budgets_view()
+        mock_warn.assert_not_called()
+        mock_select.assert_called()

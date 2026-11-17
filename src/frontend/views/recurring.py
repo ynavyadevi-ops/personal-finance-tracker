@@ -123,11 +123,14 @@ def render_recurring_view() -> None:
                 is_active = rule.get("is_active", True)
                 notes = rule.get("notes")
 
-                status_badge = (
-                    render_badge("ACTIVE", "positive")
-                    if is_active
-                    else render_badge("PAUSED", "secondary")
-                )
+                is_cancelled = bool(notes and "[CANCELLED]" in notes)
+                if is_cancelled:
+                    status_badge = render_badge("CANCELLED", "negative")
+                elif is_active:
+                    status_badge = render_badge("ACTIVE", "positive")
+                else:
+                    status_badge = render_badge("PAUSED", "secondary")
+
                 type_badge = render_badge(
                     tx_type, "negative" if tx_type == "EXPENSE" else "positive"
                 )
@@ -161,32 +164,47 @@ def render_recurring_view() -> None:
                     if notes:
                         st.caption(f"Notes: {notes}")
 
-                    col_act1, col_act2 = st.columns([1, 3])
+                    col_act1, col_act2, _ = st.columns([1, 1, 2])
                     with col_act1:
-                        if is_active:
+                        if not is_cancelled:
+                            if is_active:
+                                if st.button(
+                                    "⏸ Pause",
+                                    key=f"pause_{rule_id}",
+                                    use_container_width=True,
+                                ):
+                                    p_ok, _ = api_client.pause_recurring_rule(rule_id)
+                                    if p_ok:
+                                        st.success(f"Paused '{name}'.")
+                                        st.rerun()
+                                    else:
+                                        st.error("Failed to pause recurring rule.")
+                            else:
+                                if st.button(
+                                    "▶ Resume",
+                                    key=f"resume_{rule_id}",
+                                    use_container_width=True,
+                                ):
+                                    res_ok, res_data = api_client.resume_recurring_rule(rule_id)
+                                    if res_ok:
+                                        st.success(f"Resumed '{name}'.")
+                                        st.rerun()
+                                    else:
+                                        st.error(res_data.get("message", "Failed to resume recurring rule."))
+
+                    with col_act2:
+                        if not is_cancelled:
                             if st.button(
-                                "⏸ Pause Schedule",
-                                key=f"pause_{rule_id}",
+                                "❌ Cancel",
+                                key=f"cancel_{rule_id}",
                                 use_container_width=True,
                             ):
-                                p_ok, _ = api_client.pause_recurring_rule(rule_id)
-                                if p_ok:
-                                    st.success(f"Paused '{name}'.")
+                                c_ok, c_data = api_client.cancel_recurring_rule(rule_id)
+                                if c_ok:
+                                    st.success(f"Cancelled schedule '{name}'.")
                                     st.rerun()
                                 else:
-                                    st.error("Failed to pause recurring rule.")
-                        else:
-                            if st.button(
-                                "▶ Resume Schedule",
-                                key=f"resume_{rule_id}",
-                                use_container_width=True,
-                            ):
-                                res_ok, _ = api_client.resume_recurring_rule(rule_id)
-                                if res_ok:
-                                    st.success(f"Resumed '{name}'.")
-                                    st.rerun()
-                                else:
-                                    st.error("Failed to resume recurring rule.")
+                                    st.error(c_data.get("message", "Failed to cancel recurring rule."))
 
                     st.markdown(
                         "<hr style='border-color: #334155; margin: 1rem 0;'>",

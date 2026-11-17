@@ -22,6 +22,37 @@ This repository houses the **Personal Finance Tracker**, a production-oriented, 
 - **Phase 7 (Analytics Engine, Plotly Visualizations & AI Insights)**: **COMPLETE & VERIFIED**.
 - **Phase 8 (System Hardening, Comprehensive Testing, Packaging & Release)**: **COMPLETED & VERIFIED (LOCAL MVP RELEASE CANDIDATE)**.
 - **Post-Phase 8 Enhancement (User Registration & Dedicated Administrator Portal)**: **COMPLETED & VERIFIED**.
+- **Post-Phase 8 UAT Session 4A (Default Category Multi-Tenant Scoping Repair)**: **COMPLETED & VERIFIED**.
+- **Post-Phase 8 UAT Session 5 & 5A (Recurring Cancellation, Investment Catalog & Security Hardening)**: **COMPLETED & VERIFIED**.
+- **Post-Phase 8 UAT Session 6 (Final System Validation & Release Readiness)**: **COMPLETED & VERIFIED**.
+- **Post-Phase 8 UAT Session 6C (Portfolio Polish & Data Portability Downloads)**: **COMPLETED & VERIFIED**.
+  - **Streamlit Settings View Export Buttons**: Implemented authenticated CSV, Excel (XLSX), and JSON backup download action cards with loading spinners, error handling, and standard timestamped filenames in `src/frontend/views/settings.py`.
+  - **Data Scoping & Security**: Verified exports strictly filter by authenticated user ID; CSV formula injection mitigated; zero password hashes or JWTs in JSON backups.
+  - **Recruiter Demo Dataset (`scripts/seed_demo_recruiter.py`)**: Authored disposable seeding script for `demo.recruiter@example.com` with realistic INR checking, savings, demat, and credit card accounts, salary, living expenses, inter-account transfers, budgets, emergency savings goal, active broadband recurring rule, renovation loan with schedule, and NIFTYBEES ETF trade + dividend. Existing user records preserved untouched.
+  - **README Overhaul**: Removed unsupported claims, added full-stack Mermaid architecture, documentation index, and verified local startup steps.
+  - **Automated Regression**: 231/231 pytest passed, Ruff (0 errors), Mypy strict (0 errors across 91 files), Bandit SAST (0 issues across 12,354 lines), pip-audit (0 CVEs).
+  - **Database Integrity**: `data/finance.db` SHA-256 hash verified identical to baseline (`C7F03B0ADD08361A740AD688F7776FF62BA665D38EAB38BED615C4574E861EC7`).
+  - **Execution is halted at the Release Gate. Public deployment is NOT authorized.**
+  - **Full Analytics Validation (Phase B)**: Deterministic cash flow validated (Income ₹10,000, Expense ₹2,000, Net Flow ₹8,000, Savings Rate 80.0%), transfers excluded, currency strictly isolated (INR vs USD), category breakdown verified, budget utilization (40.0%), and savings goal progress (15.0%).
+  - **Data Portability & Export (Phases C & D)**: CSV and Excel (XLSX) exports validated with formula injection mitigation and user scoping; PDF export confirmed NOT IMPLEMENTED. User-scoped JSON backup snapshot validated; destructive restore confirmed disabled by architectural design.
+  - **Security & Authorization Controls (Phase E)**: Validated rejection of expired/invalid JWTs, disabled user rejection, RBAC enforcement (user vs admin), admin financial privacy, cross-user resource isolation, and verified recurring cancellation cannot be bypassed via notes.
+  - **Regression & Test Suite (Phases F & G)**: 230/230 pytest tests passed (100%), Ruff (0 errors), Mypy strict (0 errors in 91 files), Bandit SAST (0 issues in 12,195 lines), pip-audit (0 CVEs). `data/finance.db` hash verified identical to baseline (`C7F03B0ADD08361A740AD688F7776FF62BA665D38EAB38BED615C4574E861EC7`).
+  - **Execution is halted at the Release Gate. Public deployment is NOT authorized.**
+- **Post-Phase 8 UAT Session 5 & 5A (Recurring Cancellation, Investment Catalog & Security Hardening)**: **COMPLETED & VERIFIED**.
+  - **P0 Credential Hygiene & Git Shielding**: Removed all hardcoded test credentials from scratch scripts, rotated `uat.session5@example.com` password, gitignored `scratch/`, added demo database runtime safety guards, and verified zero repository git exposure via `git log -S`.
+  - **P1 Investment Asset Catalog**: Implemented `GET /api/v1/investments/assets` endpoint with optional `asset_type` filtering, added `InvestmentService.list_assets` and `ApiClient.list_investment_assets`, and replaced raw UUID inputs with `st.selectbox` and error/retry fallback in `src/frontend/views/investments.py`.
+  - **P2 Non-Destructive Recurring Cancellation**: Implemented `DELETE /api/v1/recurring/{rule_id}` and `POST /api/v1/recurring/{rule_id}/cancel` soft-cancellation setting `is_active = False` and `[CANCELLED]` note tag, preventing future ledger postings while leaving historical ledger entries intact, with idempotent re-cancellation and execution rejection. Added UI `CANCELLED` badge and cancel button.
+  - **Regression & Verification**: Verified `data/finance.db` SHA-256 hash (`C7F03B0ADD08361A740AD688F7776FF62BA665D38EAB38BED615C4574E861EC7`), 1 admin account (`admin@local.dev`), user balances (Checking: ₹5,000, Savings: ₹3,000, Total: ₹8,000), budget (₹2,000 spent / ₹5,000 cap, 40.0% utilization), savings goal (₹3,000 / ₹20,000, 15.0%), and admin privacy.
+  - **Automated Tests**: Total **230 passed tests** (0 failed). Zero errors in `ruff check`, zero errors in `mypy --strict src` (91 source files checked), zero issues in `bandit` SAST (12,195 lines), and zero vulnerabilities in `pip-audit`.
+  - **Execution is halted at the Release Gate. Public deployment is NOT authorized.**
+  - Remediated root cause of budget creation HTTP 404: system default categories were previously bound to `'default-user-id'`.
+  - Updated `src/db/seed.py` so 13 system default categories are seeded with `user_id = None` and `is_default = True`.
+  - Safely released legacy user scoping on existing default categories in `data/demo_finance.db` while preserving all 13 original UUIDs, names, types, colors, and icons.
+  - Added `GET /api/v1/categories` endpoint supporting filtering by `category_type` while strictly preserving tenant isolation for custom categories.
+  - Upgraded Streamlit Budget view (`src/frontend/views/budgets.py`) with an interactive category selectbox.
+  - Verified Budget UAT with live API and Streamlit UI for `uat.financial@example.com` (Groceries & Dining: ₹5,000 cap, ₹2,000 spent, ₹3,000 left, 40.0% utilization, status NORMAL).
+  - Production database `data/finance.db` integrity hash verified untouched (`C7F03B0ADD08361A740AD688F7776FF62BA665D38EAB38BED615C4574E861EC7`).
+  - Added tests in `tests/unit/test_category_access.py` and `tests/integration/test_categories_api.py`. Automated regression suite: 44/44 tests passed. Ruff: 0 errors in src and tests.
   - Added self-service user registration (`POST /api/v1/auth/register`) with Argon2id password hashing, email normalization, complexity enforcement, anti-enumeration protection, and sliding-window rate limiting.
   - Added public registration kill-switch (`SystemSettings` model with `registration_enabled` flag), allowing operators to immediately disable new registrations.
   - Implemented idempotent administrative bootstrap CLI (`src/cli/bootstrap_admin.py` and `scripts/bootstrap_admin.bat`) with interactive masked password entry or `--generate` flag, elevation confirmation prompts, and mandatory first-login password rotation flag (`must_change_password=True`).

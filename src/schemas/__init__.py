@@ -2,6 +2,7 @@
 
 from src.schemas.account import AccountCreate, AccountRead, AccountUpdate
 from src.schemas.budget import BudgetCreate, BudgetRead, BudgetUtilization
+from src.schemas.category import CategoryRead
 from src.schemas.common import GenericResponse, HealthResponse
 from src.schemas.goal import (
     GoalContributionRequest,
@@ -70,6 +71,7 @@ __all__ = [
     "BudgetCreate",
     "BudgetRead",
     "BudgetUtilization",
+    "CategoryRead",
     "SavingsGoalCreate",
     "SavingsGoalRead",
     "SavingsGoalProgress",
